@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>果壳宇宙</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo"><a href="index.html">Leo's Blog</a></div>
+        <nav class="nav">
+            <a href="index.html">主页</a>
+            <a href="#">归档</a>
+            <a href="#">关于我</a>
+            <a href="#">联系</a>
+            <a href="editor.html" class="btn btn-primary" style="padding: 6px 15px; border-radius: 4px;">写文章</a>
+        </nav>
+    </div>
+
+    <div class="hero">
+        <h1>Welcome to My Brain Garden.</h1>
+        <p>这就是我果壳里的宇宙。</p>
+    </div>
+
+    <div class="container">
+        <div class="main-content" id="articlesContainer">
+            <div style="text-align: center; padding: 50px;">加载文章中...</div>
+        </div>
+
+        <div class="sidebar">
+            <h3>👤 关于作者</h3>
+            <p>一位曾经信奉玫瑰与星辰的凡人，现在仍然信奉着。在这里，他希望能坚持热爱下去。</p>
+            <br>
+            <h3>🏷️ 热门标签</h3>
+            <p>
+                <a style="margin-right: 8px;" href="#">#前端技术 </a>
+                <a style="margin-right: 8px;" href="#">#阅读</a>
+                <a style="margin-right: 8px;" href="#">#社科</a>
+                <a style="margin-right: 8px;" href="#">#哲思</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 工具函数：格式化日期（YYYY-MM-DD → YYYY年MM月DD日）
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return formatTodayDate();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}年${month}月${day}日`;
+        }
+
+        // 工具函数：获取今日日期（YYYY年MM月DD日）
+        function formatTodayDate() {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}年${month}月${day}日`;
+        }
+
+        // 工具函数：清理Markdown格式
+        function cleanMarkdown(content) {
+            let cleaned = content.replace(/<!--\s*createTime:\s*\d{4}-\d{2}-\d{2}\s*-->/g, '');
+            cleaned = cleaned
+                .replace(/#+\s+/g, '')
+                .replace(/>+\s*/g, '')
+                .replace(/\*+|\**/g, '')
+                .replace(/`+.*?`+/g, '')
+                .replace(/!\[.*?\]\(.*?\)/g, '')
+                .replace(/\[.*?\]\(.*?\)/g, '')
+                .replace(/-{3,}|={3,}/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            return cleaned;
+        }
+
+        // 解析文件名时只保留纯文件名（去掉路径前缀）
+        async function fetchArticleFiles() {
+            try {
+                const response = await fetch('Article/');
+                if (!response.ok) throw new Error(`目录访问失败，状态码: ${response.status}`);
+
+                const dirHtml = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(dirHtml, 'text/html');
+
+                // 提取所有.md文件的链接
+                const fileLinks = doc.querySelectorAll('a[href$=".md"]');
+                const fileNames = Array.from(fileLinks)
+                    .map(link => {
+                        const href = link.getAttribute('href');
+                        // 关键：只保留文件名（去掉前面的路径，比如 "/Article/1.md" → "1.md"）
+                        return href.split('/').pop(); // 分割路径，取最后一段（纯文件名）
+                    })
+                    .filter(name => name.endsWith('.md') && name.trim() !== ''); // 过滤空值和非.md文件
+
+                // 打印解析后的文件名（方便调试）
+                console.log('解析到的.md文件：', fileNames);
+
+                if (fileNames.length === 0) {
+                    document.getElementById('articlesContainer').innerHTML = '<div style="text-align: center; padding: 50px;">Article目录下暂无.md文章</div>';
+                    return [];
+                }
+
+                return fileNames;
+            } catch (error) {
+                console.error('获取文件列表失败:', error);
+                const fallbackFiles = ['1.md', '2.md', '3.md', '4.md'];
+                document.getElementById('articlesContainer').innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #ff4444;">
+                        自动获取文件列表失败，请确认使用Live Server运行<br>
+                        兜底加载默认文章（${fallbackFiles.length}篇）
+                    </div>
+                `;
+                return fallbackFiles;
+            }
+        }
+
+        // 生成文章卡片
+        function createArticleCards(fileNames) {
+            const container = document.getElementById('articlesContainer');
+            container.innerHTML = '';
+
+            fileNames.forEach((fileName, index) => {
+                const card = document.createElement('div');
+                card.className = 'article-card fade-in';
+                card.dataset.file = fileName;
+                card.style.transitionDelay = `${index * 0.1}s`;
+
+                // 卡片链接修复：确保href是正确的相对路径
+                card.innerHTML = `
+                    <h2 class="article-title"><a href="article.html?file=${encodeURIComponent(fileName)}">加载中...</a></h2>
+                    <div class="meta">加载中...</div>
+                    <p class="excerpt">加载中...</p>
+                `;
+
+                container.appendChild(card);
+            });
+
+            return document.querySelectorAll('.article-card');
+        }
+
+        // 加载所有文章信息
+        async function loadAllArticleInfo() {
+            const fileNames = await fetchArticleFiles();
+            if (fileNames.length === 0) return;
+
+            const cards = createArticleCards(fileNames);
+
+            for (const card of cards) {
+                const fileName = card.dataset.file;
+                const titleElement = card.querySelector('.article-title a');
+                const metaElement = card.querySelector('.meta');
+                const excerptElement = card.querySelector('.excerpt');
+                
+                try {
+                    // 关键：请求路径确保是 "Article/文件名"（纯相对路径）
+                    const requestUrl = `Article/${encodeURIComponent(fileName)}`;
+                    console.log('请求文章文件：', requestUrl); // 打印请求路径（方便调试）
+                    
+                    const response = await fetch(requestUrl);
+                    if (!response.ok) throw new Error(`状态码: ${response.status}`);
+                    
+                    const content = await response.text();
+                    const plainText = cleanMarkdown(content);
+
+                    // 提取创建时间
+                    const createTimeRegex = /<!--\s*createTime:\s*(\d{4}-\d{2}-\d{2})\s*-->/;
+                    const createTimeMatch = content.match(createTimeRegex);
+                    const publishDate = createTimeMatch 
+                        ? formatDate(createTimeMatch[1]) 
+                        : formatTodayDate();
+
+                    // 提取标题和摘要
+                    const title = plainText.length > 15 
+                        ? plainText.substring(0, 15) + '...' 
+                        : plainText;
+                    const excerpt = plainText.length > 100 
+                        ? plainText.substring(0, 100) + '...' 
+                        : plainText;
+
+                    // 更新DOM
+                    metaElement.textContent = publishDate;
+                    titleElement.textContent = title;
+                    excerptElement.textContent = excerpt;
+
+                } catch (error) {
+                    console.error(`加载 ${fileName} 失败:`, error);
+                    titleElement.textContent = `文章加载失败`;
+                    metaElement.textContent = formatTodayDate();
+                    excerptElement.textContent = `加载失败（${error.message}）`;
+                }
+            }
+
+            initFadeInAnimation();
+        }
+
+        // 滚动渐显动画
+        function initFadeInAnimation() {
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            const cards = document.querySelectorAll('.article-card.fade-in');
+            cards.forEach(card => observer.observe(card));
+        }
+
+        // 页面加载后执行
+        document.addEventListener('DOMContentLoaded', loadAllArticleInfo);
+    </script>
+</body>
+</html>

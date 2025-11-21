@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章详情 - Leo's Blog</title>
+    <!-- 引入外部CSS保持样式一致 -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .h2 {
+            color: #da1a1a;
+        }
+    </style>
+    <!-- 引入marked.js用于渲染Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <div class="logo"><a href="index.html">Leo's Blog</a></div>
+        <nav class="nav">
+            <a href="index.html">主页</a>
+            <a href="#">归档</a>
+            <a href="#">关于我</a>
+            <a href="#">联系</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="article-content fade-in" id="articleContainer">
+                <!-- Markdown内容将通过JS渲染到这里 -->
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h3>👤 关于作者</h3>
+            <p>一位曾经信奉玫瑰与星辰的凡人，现在仍然信奉着。在这里，他希望能坚持热爱下去。</p>
+            <br>
+            <h3>🏷️ 热门标签</h3>
+            <p>
+                <a style="margin-right: 8px;" href="#">#前端技术 </a>
+                <a style="margin-right: 8px;" href="#">#阅读</a>
+                <a style="margin-right: 8px;" href="#">#社科</a>
+                <a style="margin-right: 8px;" href="#">#哲思</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 获取URL中的文章文件名参数
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 渲染Markdown文章
+        async function renderArticle() {
+            const fileName = getQueryParam('file');
+            if (!fileName) {
+                document.getElementById('articleContainer').innerHTML = '<h2>文章不存在</h2>';
+                return;
+            }
+
+            try {
+                // 加载Markdown文件
+                const response = await fetch(`Article/${fileName}`);
+                if (!response.ok) throw new Error('文章加载失败');
+                
+                const markdownContent = await response.text();
+                // 转换为HTML并渲染
+                const htmlContent = marked.parse(markdownContent);
+                document.getElementById('articleContainer').innerHTML = htmlContent;
+                
+                // 添加渐显动画
+                setTimeout(() => {
+                    document.getElementById('articleContainer').classList.add('visible');
+                }, 100);
+
+                // 更新页面标题
+                const titleElement = document.querySelector('#articleContainer h1');
+                if (titleElement) {
+                    document.title = `${titleElement.textContent} - Jie's Blog`;
+                }
+            } catch (error) {
+                document.getElementById('articleContainer').innerHTML = `<h2>加载失败: ${error.message}</h2>`;
+            }
+        }
+
+        // 页面加载完成后渲染文章
+        document.addEventListener('DOMContentLoaded', renderArticle);
+    </script>
+</body>
+</html>
