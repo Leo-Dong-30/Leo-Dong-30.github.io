@@ -79,48 +79,40 @@
             return cleaned;
         }
 
-        // 解析文件名时只保留纯文件名（去掉路径前缀）
         async function fetchArticleFiles() {
             try {
-                const response = await fetch('Article/');
-                if (!response.ok) throw new Error(`目录访问失败，状态码: ${response.status}`);
+                // 改为请求手动维护的文章清单文件
+                const response = await fetch('Article/articles.json');
+                if (!response.ok) throw new Error(`获取清单失败，状态码: ${response.status}`);
 
-                const dirHtml = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(dirHtml, 'text/html');
+                // 直接解析 JSON 得到文件名列表
+                const fileNames = await response.json();
+                
+                // 过滤非 .md 文件（双重保险）
+                const validFiles = fileNames.filter(name => 
+                    name.endsWith('.md') && name.trim() !== ''
+                );
 
-                // 提取所有.md文件的链接
-                const fileLinks = doc.querySelectorAll('a[href$=".md"]');
-                const fileNames = Array.from(fileLinks)
-                    .map(link => {
-                        const href = link.getAttribute('href');
-                        // 关键：只保留文件名（去掉前面的路径，比如 "/Article/1.md" → "1.md"）
-                        return href.split('/').pop(); // 分割路径，取最后一段（纯文件名）
-                    })
-                    .filter(name => name.endsWith('.md') && name.trim() !== ''); // 过滤空值和非.md文件
+                console.log('从 articles.json 解析到的.md文件：', validFiles);
 
-                // 打印解析后的文件名（方便调试）
-                console.log('解析到的.md文件：', fileNames);
-
-                if (fileNames.length === 0) {
+                if (validFiles.length === 0) {
                     document.getElementById('articlesContainer').innerHTML = '<div style="text-align: center; padding: 50px;">Article目录下暂无.md文章</div>';
                     return [];
                 }
 
-                return fileNames;
+                return validFiles;
             } catch (error) {
                 console.error('获取文件列表失败:', error);
                 const fallbackFiles = ['1.md', '2.md', '3.md', '4.md'];
                 document.getElementById('articlesContainer').innerHTML = `
                     <div style="text-align: center; padding: 50px; color: #ff4444;">
-                        自动获取文件列表失败，请确认使用Live Server运行<br>
+                        文章清单加载失败，请检查 articles.json 是否存在<br>
                         兜底加载默认文章（${fallbackFiles.length}篇）
                     </div>
                 `;
                 return fallbackFiles;
             }
         }
-
         // 生成文章卡片
         function createArticleCards(fileNames) {
             const container = document.getElementById('articlesContainer');
