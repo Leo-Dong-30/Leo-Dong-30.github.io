@@ -1,134 +1,191 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文章编辑 - Leo's Blog</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>沉浸式写作 - Leo's Blog</title>
+    <link rel="stylesheet" href="./css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* 编辑器特有覆盖样式 */
+        .editor-header-bar {
+            padding: 15px 20px;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+        }
+        .input-group label {
+            font-size: 12px;
+            color: #888;
+            font-weight: 600;
+        }
+        .form-control {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+        /* 预览区不再需要 .json-helper 样式，已移至 Modal */
+    </style>
 </head>
-<body>
-    <div class="header">
-        <div class="logo"><a href="index.html">Leo's Blog</a></div>
-        <nav class="nav">
-            <a href="index.html">主页</a>
-            <a href="#">归档</a>
-            <a href="#">关于我</a>
-            <a href="#">联系</a>
-        </nav>
+<body style="overflow: hidden; height: 100vh; display: flex; flex-direction: column;">
+
+    <header class="header" style="padding: 10px 20px;">
+        <div class="logo"><a href="index.html">Leo's Editor</a></div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="downloadMarkdown()" class="nav-btn secondary">下载 .md</button>
+            <button onclick="openConfigModal()" class="nav-btn">获取配置 JSON</button>
+        </div>
+    </header>
+
+    <!-- 元数据输入区 -->
+    <div class="editor-header-bar">
+        <div class="input-group">
+            <label>文章标题</label>
+            <input type="text" id="metaTitle" class="form-control" placeholder="输入文章标题...">
+        </div>
+        <div class="input-group" style="flex: 0.5;">
+            <label>文件名 (English)</label>
+            <input type="text" id="metaFile" class="form-control" placeholder="example.md">
+        </div>
+        <div class="input-group">
+            <label>标签 (用逗号分隔)</label>
+            <input type="text" id="metaTags" class="form-control" placeholder="例如: 前端, 随笔">
+        </div>
+        <div class="input-group">
+            <label>摘要</label>
+            <input type="text" id="metaExcerpt" class="form-control" placeholder="一句话描述...">
+        </div>
     </div>
 
-    <div class="editor-container">
-        <div class="editor-header">
-            <div>
-                <div class="file-input-wrapper">
-                    <button class="btn btn-secondary">选择本地文章</button>
-                    <input type="file" id="fileSelector" accept=".md" />
-                </div>
-            </div>
-            <div>
-                <input type="text" id="fileNameInput" placeholder="输入文件名（如：3.md）" value="new-article.md" 
-                       style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 10px;">
-                <button id="saveBtn" class="btn btn-primary">保存文章</button>
-            </div>
+    <div class="editor-layout">
+        <!-- 输入区 -->
+        <div class="editor-input editor-pane">
+            <textarea id="markdownInput" placeholder="# 开始你的创作..."></textarea>
         </div>
+        
+        <!-- 预览区  -->
+        <div class="editor-preview editor-pane">
+            <div id="previewContent" class="markdown-body"></div>
+        </div>
+    </div>
 
-        <div class="editor-content">
-            <div class="editor-input">
-                <textarea id="markdownInput" placeholder="请输入Markdown内容...
-示例格式：
-# 文章标题
-> 文章摘要（可选）
-## 一、引言
-这是文章正文，支持Markdown语法：
-- 列表
-- 图片：![描述](图片URL)
-- 链接：[文本](URL)
-- 代码：`console.log('hello')`
-"></textarea>
+    <!-- JSON 配置模态框 -->
+    <div id="configModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>文章配置 JSON</h3>
+                <button class="close-btn" onclick="closeConfigModal()">&times;</button>
             </div>
-            <div class="editor-preview" id="previewContainer"></div>
+            <div class="modal-body">
+                <div class="modal-hint">
+                    请将以下代码复制并添加到根目录的 <code>articles.json</code> 数组中
+                </div>
+                <pre id="jsonOutput"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="nav-btn secondary" onclick="closeConfigModal()">关闭</button>
+                <button class="nav-btn" onclick="copyJson()">一键复制配置</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const markdownInput = document.getElementById('markdownInput');
-        const previewContainer = document.getElementById('previewContainer');
-        const fileSelector = document.getElementById('fileSelector');
-        const saveBtn = document.getElementById('saveBtn');
-        const fileNameInput = document.getElementById('fileNameInput');
-
-        // 1. 实时预览Markdown
-        function updatePreview() {
-            const markdownContent = markdownInput.value;
-            const htmlContent = marked.parse(markdownContent);
-            previewContainer.innerHTML = htmlContent;
+        const input = document.getElementById('markdownInput');
+        const preview = document.getElementById('previewContent');
+        const modal = document.getElementById('configModal');
+        
+        // 实时渲染
+        function update() {
+            const text = input.value;
+            preview.innerHTML = marked.parse(text);
         }
 
-        markdownInput.addEventListener('input', updatePreview);
+        // 生成 JSON 数据（仅在打开模态框时调用，节省资源）
+        function generateJson() {
+            const title = document.getElementById('metaTitle').value || '未命名文章';
+            const file = document.getElementById('metaFile').value || 'undefined.md';
+            const tags = document.getElementById('metaTags').value.split(/[,，]/).map(t => t.trim()).filter(t => t);
+            const excerpt = document.getElementById('metaExcerpt').value || '无摘要';
+            const date = new Date().toISOString().split('T')[0];
+            const id = file.replace('.md', ''); // 简单的ID生成逻辑
 
-        // 2. 读取本地Markdown文件（保留原有创建时间注释）
-        fileSelector.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            if (file.type !== 'text/markdown' && !file.name.endsWith('.md')) {
-                alert('请选择.md格式的Markdown文件');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const content = event.target.result;
-                markdownInput.value = content; // 直接保留原内容（包括创建时间注释）
-                fileNameInput.value = file.name;
-                updatePreview();
+            const jsonObj = {
+                id: id,
+                file: file,
+                title: title,
+                date: date,
+                tags: tags,
+                excerpt: excerpt
             };
-            reader.readAsText(file);
-        });
 
-        // 3. 保存文章（新建文章时自动添加创建时间注释）
-        saveBtn.addEventListener('click', function() {
-            let markdownContent = markdownInput.value.trim();
-            const fileName = fileNameInput.value.trim();
+            // 格式化输出
+            document.getElementById('jsonOutput').innerText = JSON.stringify(jsonObj, null, 4) + ',';
+        }
 
-            if (!markdownContent) {
-                alert('文章内容不能为空！');
-                return;
-            }
-            if (!fileName.endsWith('.md')) {
-                alert('文件名必须以.md结尾（如：my-article.md）');
-                return;
-            }
+        // 监听输入，实时更新预览
+        input.addEventListener('input', update);
 
-            // 关键：如果是新建文章（内容中没有创建时间注释），自动添加
-            const createTimeRegex = /<!--\s*createTime:\s*\d{4}-\d{2}-\d{2}\s*-->/;
-            if (!createTimeRegex.test(markdownContent)) {
-                // 生成当前日期（YYYY-MM-DD）作为创建时间
-                const today = new Date().toISOString().split('T')[0];
-                // 在文章开头添加注释（不影响内容显示）
-                markdownContent = `<!-- createTime: ${today} -->\n\n` + markdownContent;
-            }
+        // 下载功能
+        function downloadMarkdown() {
+            const content = input.value;
+            const filename = document.getElementById('metaFile').value || 'article.md';
+            
+            if (!content) { alert('写点什么吧！'); return; }
 
-            // 创建文件并下载
-            const blob = new Blob([markdownContent], { type: 'text/markdown; charset=utf-8' });
+            const blob = new Blob([content], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
-
             const a = document.createElement('a');
             a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
+            a.download = filename;
             a.click();
+            URL.revokeObjectURL(url);
+        }
 
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                alert('文章保存成功！请将文件移动到 Article 目录下');
-            }, 100);
+        // Modal 操作逻辑
+        function openConfigModal() {
+            generateJson(); // 打开时生成最新配置
+            modal.classList.add('active');
+        }
+
+        function closeConfigModal() {
+            modal.classList.remove('active');
+        }
+
+        // 点击遮罩层关闭
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeConfigModal();
+            }
         });
 
-        // 初始化预览
-        updatePreview();
+        function copyJson() {
+            const text = document.getElementById('jsonOutput').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.querySelector('.modal-footer .nav-btn:last-child');
+                const originalText = btn.innerText;
+                btn.innerText = '复制成功！';
+                btn.style.backgroundColor = '#10B981'; // 绿色反馈
+                
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.backgroundColor = '';
+                    closeConfigModal();
+                }, 1000);
+            });
+        }
+
+        // 初始化示例文本
+        input.value = "# Hello World\n\n## 这是二级标题.\n\n点击右上角的 **“获取配置 JSON”** 按钮查看元数据。\n\n`- 列表 ![图像](URL) [超链接](www.baidu.com)`";
+        update();
     </script>
 </body>
 </html>

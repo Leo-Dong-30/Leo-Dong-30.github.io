@@ -1,214 +1,166 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>果壳宇宙</title>
+    <title>果壳宇宙 | Leo's Blog</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- 引入 Feather Icons 图标库 -->
+    <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body>
 
-    <div class="header">
+    <header class="header">
         <div class="logo"><a href="index.html">Leo's Blog</a></div>
         <nav class="nav">
-            <a href="index.html">主页</a>
+            <a href="index.html" class="active">主页</a>
             <a href="#">归档</a>
-            <a href="#">关于我</a>
-            <a href="#">联系</a>
-            <a href="editor.html" class="btn btn-primary" style="padding: 6px 15px; border-radius: 4px;">写文章</a>
+            <a href="#">关于</a>
+            <a href="editor.html" class="nav-btn">写文章</a>
         </nav>
-    </div>
+    </header>
 
     <div class="hero">
-        <h1>Welcome to My Brain Garden.</h1>
-        <p>这就是我果壳里的宇宙。</p>
+        <h1>Hey.</h1>
+        <p>玫瑰与星辰是我果壳里的宇宙。</p>
     </div>
 
     <div class="container">
-        <div class="main-content" id="articlesContainer">
-            <div style="text-align: center; padding: 50px;">加载文章中...</div>
-        </div>
+        <!-- 主内容区 -->
+        <main class="main-content" id="articlesContainer">
+            <!-- 文章将通过 JS 插入这里 -->
+            <div style="text-align: center; color: var(--text-secondary); margin-top: 50px;">
+                正在连接宇宙信号...
+            </div>
+        </main>
 
-        <div class="sidebar">
-            <h3>👤 关于作者</h3>
-            <p>一位曾经信奉玫瑰与星辰的凡人，现在仍然信奉着。在这里，他希望能坚持热爱下去。</p>
-            <br>
-            <h3>🏷️ 热门标签</h3>
-            <p>
-                <a style="margin-right: 8px;" href="#">#前端技术 </a>
-                <a style="margin-right: 8px;" href="#">#阅读</a>
-                <a style="margin-right: 8px;" href="#">#社科</a>
-                <a style="margin-right: 8px;" href="#">#哲思</a>
-            </p>
-        </div>
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-widget">
+                <h3><i data-feather="user"></i> 关于作者</h3>
+                <p style="color: var(--text-secondary); font-size: 0.95rem;">
+                    一位曾经信奉玫瑰与星辰的凡人，现在仍然信奉着。
+                </p>
+            </div>
+
+            <div class="sidebar-widget">
+                <h3><i data-feather="tag"></i> 标签云</h3>
+                <div class="tags-cloud" id="tagsContainer">
+                    <!-- 标签将自动生成 -->
+                </div>
+            </div>
+        </aside>
     </div>
 
     <script>
-        // 工具函数：格式化日期（YYYY-MM-DD → YYYY年MM月DD日）
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return formatTodayDate();
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}年${month}月${day}日`;
-        }
+        // 初始化图标
+        feather.replace();
 
-        // 工具函数：获取今日日期（YYYY年MM月DD日）
-        function formatTodayDate() {
-            const date = new Date();
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}年${month}月${day}日`;
-        }
+        let allArticles = [];
 
-        // 工具函数：清理Markdown格式
-        function cleanMarkdown(content) {
-            let cleaned = content.replace(/<!--\s*createTime:\s*\d{4}-\d{2}-\d{2}\s*-->/g, '');
-            cleaned = cleaned
-                .replace(/#+\s+/g, '')
-                .replace(/>+\s*/g, '')
-                .replace(/\*+|\**/g, '')
-                .replace(/`+.*?`+/g, '')
-                .replace(/!\[.*?\]\(.*?\)/g, '')
-                .replace(/\[.*?\]\(.*?\)/g, '')
-                .replace(/-{3,}|={3,}/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-            return cleaned;
-        }
-
-        async function fetchArticleFiles() {
+        // 1. 获取文章数据
+        async function fetchArticles() {
             try {
-                // 改为请求手动维护的文章清单文件
-                const response = await fetch('Article/articles.json');
-                if (!response.ok) throw new Error(`获取清单失败，状态码: ${response.status}`);
-
-                // 直接解析 JSON 得到文件名列表
-                const fileNames = await response.json();
+                // 优先读取 articles.json (适配 GitHub Pages)
+                const response = await fetch('articles.json');
+                if (!response.ok) throw new Error('无法加载文章列表');
                 
-                // 过滤非 .md 文件（双重保险）
-                const validFiles = fileNames.filter(name => 
-                    name.endsWith('.md') && name.trim() !== ''
-                );
+                allArticles = await response.json();
+                
+                // 按日期倒序排列【这里是卡片排序规则！】
+                allArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                console.log('从 articles.json 解析到的.md文件：', validFiles);
-
-                if (validFiles.length === 0) {
-                    document.getElementById('articlesContainer').innerHTML = '<div style="text-align: center; padding: 50px;">Article目录下暂无.md文章</div>';
-                    return [];
-                }
-
-                return validFiles;
+                renderTags();
+                renderArticles(allArticles);
             } catch (error) {
-                console.error('获取文件列表失败:', error);
-                const fallbackFiles = ['1.md', '2.md', '3.md', '4.md'];
+                console.error(error);
                 document.getElementById('articlesContainer').innerHTML = `
-                    <div style="text-align: center; padding: 50px; color: #ff4444;">
-                        文章清单加载失败，请检查 articles.json 是否存在<br>
-                        兜底加载默认文章（${fallbackFiles.length}篇）
+                    <div style="text-align: center; padding: 40px;">
+                        <h3>⚠️ 加载失败</h3>
+                        <p>请确保根目录下存在 <code>articles.json</code> 且格式正确。</p>
                     </div>
                 `;
-                return fallbackFiles;
             }
         }
-        // 生成文章卡片
-        function createArticleCards(fileNames) {
-            const container = document.getElementById('articlesContainer');
-            container.innerHTML = '';
 
-            fileNames.forEach((fileName, index) => {
-                const card = document.createElement('div');
-                card.className = 'article-card fade-in';
-                card.dataset.file = fileName;
-                card.style.transitionDelay = `${index * 0.1}s`;
-
-                // 卡片链接修复：确保href是正确的相对路径
-                card.innerHTML = `
-                    <h2 class="article-title"><a href="article.html?file=${encodeURIComponent(fileName)}">加载中...</a></h2>
-                    <div class="meta">加载中...</div>
-                    <p class="excerpt">加载中...</p>
-                `;
-
-                container.appendChild(card);
+        // 2. 渲染标签云
+        function renderTags() {
+            const tagsMap = new Map();
+            
+            // 统计标签数量
+            allArticles.forEach(article => {
+                if (article.tags) {
+                    article.tags.forEach(tag => {
+                        tagsMap.set(tag, (tagsMap.get(tag) || 0) + 1);
+                    });
+                }
             });
 
-            return document.querySelectorAll('.article-card');
+            const tagsContainer = document.getElementById('tagsContainer');
+            tagsContainer.innerHTML = `<span class="tag-item active" onclick="filterArticles('all', this)">全部</span>`;
+
+            tagsMap.forEach((count, tag) => {
+                tagsContainer.innerHTML += `
+                    <span class="tag-item" onclick="filterArticles('${tag}', this)">
+                        #${tag} <span style="opacity:0.6; font-size:0.8em;">${count}</span>
+                    </span>
+                `;
+            });
         }
 
-        // 加载所有文章信息
-        async function loadAllArticleInfo() {
-            const fileNames = await fetchArticleFiles();
-            if (fileNames.length === 0) return;
-
-            const cards = createArticleCards(fileNames);
-
-            for (const card of cards) {
-                const fileName = card.dataset.file;
-                const titleElement = card.querySelector('.article-title a');
-                const metaElement = card.querySelector('.meta');
-                const excerptElement = card.querySelector('.excerpt');
-                
-                try {
-                    // 关键：请求路径确保是 "Article/文件名"（纯相对路径）
-                    const requestUrl = `Article/${encodeURIComponent(fileName)}`;
-                    console.log('请求文章文件：', requestUrl); // 打印请求路径（方便调试）
+        // 3. 渲染文章列表
+        function renderArticles(articles) {
+            const container = document.getElementById('articlesContainer');
+            container.innerHTML = '';
+            
+            // 添加入场动画类
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(10px)';
+            
+            if (articles.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:40px; color:#999;">没有找到相关文章...</div>';
+            } else {
+                articles.forEach(article => {
+                    // 生成标签 HTML
+                    const tagsHtml = article.tags.map(tag => `<span class="meta-tag">${tag}</span>`).join('');
                     
-                    const response = await fetch(requestUrl);
-                    if (!response.ok) throw new Error(`状态码: ${response.status}`);
-                    
-                    const content = await response.text();
-                    const plainText = cleanMarkdown(content);
-
-                    // 提取创建时间
-                    const createTimeRegex = /<!--\s*createTime:\s*(\d{4}-\d{2}-\d{2})\s*-->/;
-                    const createTimeMatch = content.match(createTimeRegex);
-                    const publishDate = createTimeMatch 
-                        ? formatDate(createTimeMatch[1]) 
-                        : formatTodayDate();
-
-                    // 提取标题和摘要
-                    const title = plainText.length > 15 
-                        ? plainText.substring(0, 15) + '...' 
-                        : plainText;
-                    const excerpt = plainText.length > 100 
-                        ? plainText.substring(0, 100) + '...' 
-                        : plainText;
-
-                    // 更新DOM
-                    metaElement.textContent = publishDate;
-                    titleElement.textContent = title;
-                    excerptElement.textContent = excerpt;
-
-                } catch (error) {
-                    console.error(`加载 ${fileName} 失败:`, error);
-                    titleElement.textContent = `文章加载失败`;
-                    metaElement.textContent = formatTodayDate();
-                    excerptElement.textContent = `加载失败（${error.message}）`;
-                }
+                    const card = `
+                        <article class="article-card">
+                            <div class="article-meta">
+                                <span>${article.date}</span>
+                                ${tagsHtml}
+                            </div>
+                            <h2><a href="article.html?id=${article.id}&file=${article.file}">${article.title}</a></h2>
+                            <p class="article-excerpt">${article.excerpt}</p>
+                        </article>
+                    `;
+                    container.innerHTML += card;
+                });
             }
 
-            initFadeInAnimation();
+            // 简单的淡入动画
+            setTimeout(() => {
+                container.style.transition = 'all 0.5s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 50);
         }
 
-        // 滚动渐显动画
-        function initFadeInAnimation() {
-            const observer = new IntersectionObserver(entries => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.1 });
+        // 4. 筛选功能
+        window.filterArticles = function(tag, element) {
+            // 更新按钮状态
+            document.querySelectorAll('.tag-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
 
-            const cards = document.querySelectorAll('.article-card.fade-in');
-            cards.forEach(card => observer.observe(card));
+            if (tag === 'all') {
+                renderArticles(allArticles);
+            } else {
+                const filtered = allArticles.filter(a => a.tags && a.tags.includes(tag));
+                renderArticles(filtered);
+            }
         }
 
-        // 页面加载后执行
-        document.addEventListener('DOMContentLoaded', loadAllArticleInfo);
+        document.addEventListener('DOMContentLoaded', fetchArticles);
     </script>
 </body>
 </html>
