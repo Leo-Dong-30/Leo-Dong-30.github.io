@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>果壳宇宙 | Leo's Blog</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
     <!-- 引入 Feather Icons 图标库 -->
     <script src="https://unpkg.com/feather-icons"></script>
+    <!-- 引入粒子效果库 -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
 </head>
 <body>
 
@@ -21,8 +24,14 @@
     </header>
 
     <div class="hero">
-        <h1>Hey.</h1>
-        <p>玫瑰与星辰是我果壳里的宇宙。</p>
+        <!-- 粒子效果容器 -->
+        <div id="particles-js" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"></div>
+        
+        <!-- 原有内容保持不变，但需要添加z-index确保在粒子上方 -->
+        <div style="position: relative; z-index: 1;">
+            <h1>Hey.</h1>
+            <p>Finally, I believe that instinction and taste have the power.</p>
+        </div>
     </div>
 
     <div class="container">
@@ -162,5 +171,106 @@
 
         document.addEventListener('DOMContentLoaded', fetchArticles);
     </script>
+
+<!-- 在原有引入基础上，修改粒子配置脚本 -->
+<script>
+    particlesJS('particles-js', {
+        "particles": {
+            "number": {
+                "value": 120,  // 增加粒子数量
+                "density": {
+                    "enable": true,
+                    "value_area": 700  // 减小区域密度，让粒子更集中
+                }
+            },
+            "color": {
+                "value": ["#ffffff", "#ffccd5", "#cce5ff"]  // 加深粉色和蓝色饱和度
+            },
+            "shape": {
+                "type": ["circle", "star"]  // 增加星形粒子，呼应星辰主题
+                // "stroke": {
+                //     "width": 1,
+                //     "color": "#ff8fab"  // 增加粉色描边
+                // }
+            },
+            "opacity": {
+                "value": 1,  // 完全不透明
+                "random": true,
+                "anim": {
+                    "enable": true,
+                    "speed": 2,
+                    "opacity_min": 0.5,  // 最低不透明度提高
+                    "sync": false
+                }
+            },
+            "size": {
+                "value": 4,  // 增大粒子尺寸
+                "random": true,
+                "anim": {
+                    "enable": true,
+                    "speed": 3,
+                    "size_min": 1,
+                    "sync": false
+                }
+            },
+            "line_linked": {
+                "enable": true,
+                "distance": 150,  // 缩短连线距离，让连线更密集
+                "color": "#ffcceb",  // 粉色连线，呼应玫瑰主题
+                "opacity": 0.6,  // 提高连线透明度
+                "width": 1.5  // 加粗连线
+            },
+            "move": {
+                "enable": true,
+                "speed": 1.2,  // 稍快的移动速度
+                "direction": "none",
+                "random": true,
+                "straight": false,
+                "out_mode": "out",
+                "bounce": false,
+                "attract": {
+                    "enable": false,  // 不开启吸引效果，让粒子有聚集感
+                    "rotateX": 300,
+                    "rotateY": 800
+                }
+            }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": {
+                "onhover": {
+                    "enable": true,
+                    "mode": "grab"
+                },
+                "onclick": {
+                    "enable": true,
+                    "mode": "push"
+                },
+                "resize": true,
+                "onmousemove": {  // 新增鼠标移动跟踪
+                    "enable": true,
+                    "mode": "attract"
+                    }
+            },
+            "modes": {
+                "grab": {
+                    "distance": 160,
+                    "line_linked": {
+                        "opacity": 0.8  // 悬停时连线更明显
+                    }
+                },
+                "push": {
+                    "particles_nb": 5  // 点击时生成更多粒子
+                },
+                "attract": {  // 新增吸引模式配置
+                    "rotateX": 600,
+                    "rotateY": 1200
+                    }
+            }
+        },
+        "retina_detect": true
+    });
+</script>
+
 </body>
 </html>

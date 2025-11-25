@@ -1,114 +1,146 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>文章阅读 - Leo's Blog</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://unpkg.com/feather-icons"></script>
-</head>
-<body style="background-color: #fff;"> <!-- 阅读页全白背景更专注 -->
+  </head>
+  <body style="background-color: #fff">
+    <!-- 阅读页全白背景更专注 -->
 
     <div id="progress-bar"></div>
 
     <header class="header">
-        <div class="logo"><a href="index.html">Leo's Blog</a></div>
-        <nav class="nav">
-            <a href="index.html">返回首页</a>
-        </nav>
+      <div class="logo"><a href="index.html">Leo's Blog</a></div>
+      <nav class="nav">
+        <a href="index.html">返回首页</a>
+      </nav>
     </header>
 
     <div class="article-container">
-        <!-- 头部信息 -->
-        <div class="article-header" id="headerInfo">
-            <h1 id="articleTitle">加载中...</h1>
-            <div class="article-meta" style="justify-content: center;" id="articleMeta">
-                <!-- 动态填充 -->
-            </div>
+      <!-- 头部信息 -->
+      <div class="article-header" id="headerInfo">
+        <h1 id="articleTitle">加载中...</h1>
+        <div
+          class="article-meta"
+          style="justify-content: center"
+          id="articleMeta"
+        >
+          <!-- 动态填充 -->
         </div>
+      </div>
 
-        <!-- 正文内容 -->
-        <div class="markdown-body" id="content">
-            <div style="text-align: center; padding: 50px; color: #999;">
-                <i data-feather="loader" class="spin"></i> 文章渲染中...
-            </div>
+      <!-- 正文内容 -->
+      <div class="markdown-body" id="content">
+        <div style="text-align: center; padding: 50px; color: #999">
+          <i data-feather="loader" class="spin"></i> 文章渲染中...
         </div>
+      </div>
     </div>
 
     <script>
-        feather.replace();
+      feather.replace();
 
-        // 1. 获取 URL 参数
-        const params = new URLSearchParams(window.location.search);
-        const fileName = params.get('file'); // 文件名
-        const id = params.get('id');       // 文章ID (用于查找元数据)
+      // 1. 获取 URL 参数
+      const params = new URLSearchParams(window.location.search);
+      const fileName = params.get("file"); // 文件名
+      const id = params.get("id"); // 文章ID (用于查找元数据)
 
-        // 2. 阅读进度条逻辑
-        window.onscroll = function() {
-            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            let scrolled = (winScroll / height) * 100;
-            document.getElementById("progress-bar").style.width = scrolled + "%";
-        };
+      // 2. 阅读进度条逻辑
+      window.onscroll = function () {
+        let winScroll =
+          document.body.scrollTop || document.documentElement.scrollTop;
+        let height =
+          document.documentElement.scrollHeight -
+          document.documentElement.clientHeight;
+        let scrolled = (winScroll / height) * 100;
+        document.getElementById("progress-bar").style.width = scrolled + "%";
+      };
 
-        // 3. 加载文章逻辑
-        async function loadArticle() {
-            if (!fileName) {
-                document.getElementById('articleTitle').innerText = '404 Article Not Found';
-                document.getElementById('content').innerHTML = '文章参数丢失，请返回首页。';
-                return;
-            }
+      // 3. 加载文章逻辑
+      async function loadArticle() {
+        if (!fileName) {
+          document.getElementById("articleTitle").innerText =
+            "404 Article Not Found";
+          document.getElementById("content").innerHTML =
+            "文章参数丢失，请返回首页。";
+          return;
+        }
 
-            try {
-                // 并行请求：文章内容 和 元数据(可选)
-                const contentPromise = fetch(`Article/${fileName}`).then(res => {
-                    if (!res.ok) throw new Error('Markdown fetch failed');
-                    return res.text();
-                });
+        try {
+          // 并行请求：文章内容 和 元数据(可选)
+          const contentPromise = fetch(`Article/${fileName}`).then((res) => {
+            if (!res.ok) throw new Error("Markdown fetch failed");
+            return res.text();
+          });
 
-                // 尝试从 articles.json 获取标题和日期等信息
-                const metaPromise = fetch('articles.json').then(res => res.ok ? res.json() : []);
+          // 尝试从 articles.json 获取标题和日期等信息
+          const metaPromise = fetch("articles.json").then((res) =>
+            res.ok ? res.json() : []
+          );
 
-                const [markdown, allArticles] = await Promise.all([contentPromise, metaPromise]);
+          const [markdown, allArticles] = await Promise.all([
+            contentPromise,
+            metaPromise,
+          ]);
 
-                // 渲染 Markdown
-                document.getElementById('content').innerHTML = marked.parse(markdown);
+          // 渲染 Markdown
+          document.getElementById("content").innerHTML = marked.parse(markdown);
+          
+          // 修复 Markdown 图片路径，使其基于 Article/ 目录
+          document.querySelectorAll("#content img").forEach((img) => {
+            const original = img.getAttribute("src");
 
-                // 填充元数据
-                const meta = allArticles.find(a => a.file === fileName || a.id === id);
-                if (meta) {
-                    document.title = `${meta.title} - Leo's Blog`;
-                    document.getElementById('articleTitle').innerText = meta.title;
-                    
-                    const tagsHtml = meta.tags ? meta.tags.map(t => `<span class="meta-tag">#${t}</span>`).join(' ') : '';
-                    document.getElementById('articleMeta').innerHTML = `
+            // 跳过绝对路径或网络图片
+            if (original.startsWith("http") || original.startsWith("/")) return;
+
+            // 为相对路径自动补上 Article/
+            img.src = `Article/${original}`;
+          });
+
+          // 填充元数据
+          const meta = allArticles.find(
+            (a) => a.file === fileName || a.id === id
+          );
+          if (meta) {
+            document.title = `${meta.title} - Leo's Blog`;
+            document.getElementById("articleTitle").innerText = meta.title;
+
+            const tagsHtml = meta.tags
+              ? meta.tags
+                  .map((t) => `<span class="meta-tag">#${t}</span>`)
+                  .join(" ")
+              : "";
+            document.getElementById("articleMeta").innerHTML = `
                         <span><i data-feather="calendar" style="width:14px;"></i> ${meta.date}</span>
                         ${tagsHtml}
                     `;
-                } else {
-                    // 如果没找到元数据，尝试从 Markdown 第一行提取 H1
-                    const firstLine = markdown.split('\n')[0];
-                    if (firstLine.startsWith('# ')) {
-                        document.getElementById('articleTitle').innerText = firstLine.replace('# ', '');
-                    }
-                }
-                
-                // 再次渲染图标（因为内容是后插入的）
-                feather.replace();
+          } else {
+            // 如果没找到元数据，尝试从 Markdown 第一行提取 H1
+            const firstLine = markdown.split("\n")[0];
+            if (firstLine.startsWith("# ")) {
+              document.getElementById("articleTitle").innerText =
+                firstLine.replace("# ", "");
+            }
+          }
 
-            } catch (error) {
-                console.error(error);
-                document.getElementById('content').innerHTML = `
+          // 再次渲染图标（因为内容是后插入的）
+          feather.replace();
+        } catch (error) {
+          console.error(error);
+          document.getElementById("content").innerHTML = `
                     <div style="color: #ef4444; text-align: center;">
                         <h3>无法加载文章</h3>
                         <p>请检查 <code>Article/</code> 目录下是否存在 <code>${fileName}</code> 文件。</p>
                     </div>
                 `;
-            }
         }
+      }
 
-        loadArticle();
+      loadArticle();
     </script>
-</body>
+  </body>
 </html>
