@@ -6,141 +6,180 @@
     <title>文章阅读 - Leo's Blog</title>
     <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js"></script>
     <script src="https://unpkg.com/feather-icons"></script>
   </head>
-  <body style="background-color: #fff">
-    <!-- 阅读页全白背景更专注 -->
-
+  <body>
     <div id="progress-bar"></div>
 
     <header class="header">
       <div class="logo"><a href="index.html">Leo's Blog</a></div>
       <nav class="nav">
-        <a href="index.html">返回首页</a>
+        <a href="index.html"
+          ><i data-feather="arrow-left" style="vertical-align: -2px"></i>
+          返回首页</a
+        >
+        <a href="#" onclick="toggleTheme()" title="切换日/夜模式"
+          ><i data-feather="moon" id="themeIcon"></i
+        ></a>
       </nav>
     </header>
 
     <div class="article-container">
-      <!-- 头部信息 -->
       <div class="article-header" id="headerInfo">
         <h1 id="articleTitle">加载中...</h1>
         <div
           class="article-meta"
           style="justify-content: center"
           id="articleMeta"
-        >
-          <!-- 动态填充 -->
-        </div>
+        ></div>
       </div>
 
-      <!-- 正文内容 -->
       <div class="markdown-body" id="content">
-        <div style="text-align: center; padding: 50px; color: #999">
+        <div
+          style="
+            text-align: center;
+            padding: 50px;
+            color: var(--text-secondary);
+          "
+        >
           <i data-feather="loader" class="spin"></i> 文章渲染中...
         </div>
       </div>
     </div>
 
     <script>
-      feather.replace();
+      // --- 0. 主题逻辑 ---
+      document.addEventListener("DOMContentLoaded", () => {
+        initTheme();
+        feather.replace();
+        loadArticle();
+      });
 
-      // 1. 获取 URL 参数
+      function initTheme() {
+        const isDark = localStorage.getItem("theme") === "dark";
+        if (isDark) document.body.classList.add("dark-mode");
+        updateThemeIcon();
+      }
+
+      function toggleTheme() {
+        document.body.classList.toggle("dark-mode");
+        localStorage.setItem(
+          "theme",
+          document.body.classList.contains("dark-mode") ? "dark" : "light"
+        );
+        updateThemeIcon();
+      }
+
+      function updateThemeIcon() {
+        const icon = document.body.classList.contains("dark-mode")
+          ? "sun"
+          : "moon";
+        document.getElementById("themeIcon").innerHTML = feather.icons[
+          icon
+        ].toSvg({ width: 18 });
+      }
+
+      // 获取 URL 参数
       const params = new URLSearchParams(window.location.search);
-      const fileName = params.get("file"); // 文件名
-      const id = params.get("id"); // 文章ID (用于查找元数据)
+      const fileName = params.get("file");
+      const id = params.get("id");
+      const keyword = params.get("keyword");
 
-      // 2. 阅读进度条逻辑
-      window.onscroll = function () {
-        let winScroll =
-          document.body.scrollTop || document.documentElement.scrollTop;
-        let height =
+      // --- 1. 阅读进度条 ---
+      window.addEventListener("scroll", () => {
+        const scrollTop =
+          document.documentElement.scrollTop || document.body.scrollTop;
+        const scrollHeight =
           document.documentElement.scrollHeight -
           document.documentElement.clientHeight;
-        let scrolled = (winScroll / height) * 100;
+        const scrolled = (scrollTop / scrollHeight) * 100;
         document.getElementById("progress-bar").style.width = scrolled + "%";
-      };
+      });
 
-      // 3. 加载文章逻辑
+      // --- 2. 文章加载 ---
       async function loadArticle() {
         if (!fileName) {
-          document.getElementById("articleTitle").innerText =
-            "404 Article Not Found";
-          document.getElementById("content").innerHTML =
-            "文章参数丢失，请返回首页。";
+          showError("文章参数丢失", "请返回首页重新进入。");
           return;
         }
 
         try {
-          // 并行请求：文章内容 和 元数据(可选)
-          const contentPromise = fetch(`Article/${fileName}`).then((res) => {
-            if (!res.ok) throw new Error("Markdown fetch failed");
-            return res.text();
-          });
-
-          // 尝试从 articles.json 获取标题和日期等信息
-          const metaPromise = fetch("articles.json").then((res) =>
-            res.ok ? res.json() : []
-          );
-
-          const [markdown, allArticles] = await Promise.all([
-            contentPromise,
-            metaPromise,
+          const [markdown, articlesData] = await Promise.all([
+            fetch(`Article/${fileName}`).then((res) => {
+              if (!res.ok) throw new Error("File not found");
+              return res.text();
+            }),
+            fetch("articles.json").then((res) => (res.ok ? res.json() : [])),
           ]);
 
-          // 渲染 Markdown
-          document.getElementById("content").innerHTML = marked.parse(markdown);
-          
-          // 修复 Markdown 图片路径，使其基于 Article/ 目录
-          document.querySelectorAll("#content img").forEach((img) => {
-            const original = img.getAttribute("src");
+          renderContent(markdown);
+          renderMetadata(articlesData, markdown);
 
-            // 跳过绝对路径或网络图片
-            if (original.startsWith("http") || original.startsWith("/")) return;
-
-            // 为相对路径自动补上 Article/
-            img.src = `Article/${original}`;
-          });
-
-          // 填充元数据
-          const meta = allArticles.find(
-            (a) => a.file === fileName || a.id === id
-          );
-          if (meta) {
-            document.title = `${meta.title} - Leo's Blog`;
-            document.getElementById("articleTitle").innerText = meta.title;
-
-            const tagsHtml = meta.tags
-              ? meta.tags
-                  .map((t) => `<span class="meta-tag">#${t}</span>`)
-                  .join(" ")
-              : "";
-            document.getElementById("articleMeta").innerHTML = `
-                        <span><i data-feather="calendar" style="width:14px;"></i> ${meta.date}</span>
-                        ${tagsHtml}
-                    `;
-          } else {
-            // 如果没找到元数据，尝试从 Markdown 第一行提取 H1
-            const firstLine = markdown.split("\n")[0];
-            if (firstLine.startsWith("# ")) {
-              document.getElementById("articleTitle").innerText =
-                firstLine.replace("# ", "");
-            }
+          // 高亮关键词
+          if (keyword) {
+            const instance = new Mark(document.querySelector(".markdown-body"));
+            instance.mark(keyword);
           }
-
-          // 再次渲染图标（因为内容是后插入的）
-          feather.replace();
+          
         } catch (error) {
-          console.error(error);
-          document.getElementById("content").innerHTML = `
-                    <div style="color: #ef4444; text-align: center;">
-                        <h3>无法加载文章</h3>
-                        <p>请检查 <code>Article/</code> 目录下是否存在 <code>${fileName}</code> 文件。</p>
-                    </div>
-                `;
+          console.error("Load Article Error:", error);
+          showError(
+            "无法加载文章",
+            `找不到文件 <code>Article/${fileName}</code> 或网络错误。`
+          );
         }
       }
 
-      loadArticle();
+      function renderContent(markdown) {
+        const contentEl = document.getElementById("content");
+        contentEl.innerHTML = marked.parse(markdown);
+
+        contentEl.querySelectorAll("img").forEach((img) => {
+          const src = img.getAttribute("src");
+          if (src && !src.startsWith("http") && !src.startsWith("/")) {
+            img.src = `Article/${src}`;
+          }
+        });
+      }
+
+      function renderMetadata(articles, markdown) {
+        const meta = articles.find((a) => a.file === fileName || a.id === id);
+        const titleEl = document.getElementById("articleTitle");
+        const metaEl = document.getElementById("articleMeta");
+
+        if (meta) {
+          document.title = `${meta.title} - Leo's Blog`;
+          titleEl.innerText = meta.title;
+          const tagsHtml = (meta.tags || [])
+            .map((t) => `<span class="meta-tag">#${t}</span>`)
+            .join(" ");
+          metaEl.innerHTML = `
+            <span><i data-feather="calendar" style="width:14px;"></i> ${meta.date}</span>
+            ${tagsHtml}
+          `;
+        } else {
+          const firstLine = markdown.split("\n")[0];
+          const extractedTitle = firstLine.startsWith("# ")
+            ? firstLine.replace("# ", "")
+            : "未命名文章";
+          titleEl.innerText = extractedTitle;
+          document.title = extractedTitle;
+          metaEl.innerHTML = `<span><i data-feather="file-text"></i> 未录入元数据</span>`;
+        }
+        feather.replace();
+      }
+
+      function showError(title, message) {
+        document.getElementById("articleTitle").innerText = "404 Error";
+        document.getElementById("content").innerHTML = `
+          <div style="color: #ef4444; text-align: center; padding: 40px; background: rgba(239,68,68,0.1); border-radius: 8px;">
+            <h3>${title}</h3>
+            <p>${message}</p>
+          </div>
+        `;
+        document.getElementById("articleMeta").innerHTML = "";
+      }
     </script>
   </body>
 </html>
