@@ -3,231 +3,379 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>果壳宇宙 | Leo's Blog</title>
+    <title>探索 | Leo's Universe</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/feather-icons"></script>
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
 
-    <header class="header">
-        <div class="logo"><a href="index.html">Leo's Blog</a></div>
+    <!-- Header 改造：集成视图切换，图表化风格 -->
+    <header class="header" id="mainHeader">
+        <div class="logo">
+            <i data-feather=""></i> <a href="index.html">Leo's Log</a>
+        </div>
+        
         <nav class="nav">
-            <a href="index.html" class="active">主页</a>
-            <a href="#">归档</a>
-            <a href="#" onclick="toggleTheme()" title="切换日/夜模式"><i data-feather="moon" id="themeIcon"></i></a>
-            <a href="editor.html" class="nav-btn">写文章</a>
+            <!-- 视图切换：知识星空 -->
+            <button class="nav-icon-btn active" id="btnGraph" onclick="switchView('graph')" title="知识星空">
+                <i data-feather="share-2" width="18"></i>
+            </button>
+            <!-- 视图切换：徒步路径 -->
+            <button class="nav-icon-btn" id="btnTimeline" onclick="switchView('timeline')" title="徒步路径">
+                <i data-feather="list" width="18"></i>
+            </button>
+            
+            <div class="nav-divider"></div>
+
+            <button class="nav-icon-btn" onclick="toggleInspirationModal()" title="灵感集">
+                <i data-feather="zap" width="18"></i>
+            </button>
+            <button class="nav-icon-btn" onclick="toggleTheme()" title="日/夜模式">
+                <i data-feather="moon" id="themeIcon" width="18"></i>
+            </button>
+
+            <div class="nav-divider"></div>
+
+            <a href="editor.html" class="nav-write-btn">
+                <i data-feather="pen-tool" style="width:14px"></i> 记录
+            </a>
         </nav>
     </header>
 
-    <div class="hero">
-        <div id="particles-js" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"></div>
-        
-        <div style="position: relative; z-index: 1;">
-            <h1>Hey.</h1>
-            <p>Finally, I believe that instinction and taste have the power.</p>
+    <div class="hero" style="text-align: center; padding: 80px 20px 40px; position: relative; z-index: 10;">
+        <h1 style="font-family: var(--font-serif); font-size: 3.5rem; margin-bottom: 20px; letter-spacing: -1px; opacity: 0.9;">
+            世界在脚下，星空在头顶
+        </h1>
+        <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto; font-style: italic; font-size: 1.1rem;">
+            "Not all those who wander are lost."
+        </p>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="search-wrapper" style="margin-bottom: 60px; text-align: center; position: relative; z-index: 20;">
+        <div style="position: relative; display: inline-block; width: 100%; max-width: 420px;">
+            <i data-feather="search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); width: 18px;"></i>
+            <input type="text" id="searchInput" 
+               style="width: 100%; padding: 12px 20px 12px 45px; border-radius: 99px; border: 1px solid var(--border-color); background: var(--bg-card); outline: none; box-shadow: var(--shadow-sm); font-size: 0.95rem; color: var(--text-main); transition: all 0.2s;" 
+               placeholder="搜索宇宙信号..."
+               onfocus="this.style.borderColor= 'var(--primary)'; this.style.boxShadow='var(--shadow-hover)'"
+               onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='var(--shadow-sm)'">
+            <div id="search-status" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-secondary); display: none;">
+                <i data-feather="loader" class="spin" style="width: 12px;"></i>
+            </div>
         </div>
     </div>
 
-    <div class="search-wrapper">
-        <i data-feather="search" class="search-icon"></i>
-        <input type="text" class="search-box" id="searchInput" placeholder="搜索宇宙的信号...">
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+        
+        <!-- 视图 A：知识星空 -->
+        <div id="graph-view" class="active">
+            <div id="d3-container" style="width:100%; height:100%;"></div>
+            <div class="graph-tooltip" id="graphTooltip"></div>
+            <div id="graph-loading" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); color: var(--text-secondary);">
+                <i data-feather="loader" class="spin"></i> 星图构建中...
+            </div>
+        </div>
+
+        <!-- 视图 B：徒步路径 (列表) -->
+        <div id="timeline-view">
+            <!-- JS 渲染列表 -->
+        </div>
+
     </div>
 
-    <div class="container">
-        <main class="main-content" id="articlesContainer">
-            <div style="text-align: center; color: var(--text-secondary); margin-top: 50px;">
-                <i data-feather="loader" class="spin"></i> 正在连接宇宙信号...
-            </div>
-        </main>
-
-        <aside class="sidebar">
-            <div class="sidebar-widget">
-                <h3><i data-feather="user"></i> 关于作者</h3>
-                <p style="color: var(--text-secondary); font-size: 0.95rem;">
-                    一位曾经信奉玫瑰与星辰的凡人，现在仍然信奉着。
-                </p>
-            </div>
-
-            <div class="sidebar-widget">
-                <h3><i data-feather="tag"></i> 标签云</h3>
-                <div class="tags-cloud" id="tagsContainer">
-                    </div>
-            </div>
-        </aside>
+    <!-- 首页灵感 Modal -->
+    <div class="overlay" id="inspirationOverlay" onclick="toggleInspirationModal()"></div>
+    <div class="inspiration-drawer" id="homeInspirationDrawer" style="position: fixed; top: 50%; left: 50%; bottom: auto; right: auto; transform: translate(-50%, -50%) scale(0.9); width: 500px; opacity: 0; pointer-events: none; transition: all 0.3s;">
+        <div class="drawer-top" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; color: var(--text-main);">全站灵感碎片</h3>
+            <button class="btn-ghost" onclick="toggleInspirationModal()"><i data-feather="x"></i></button>
+        </div>
+        <ul class="drawer-list" id="homeIdeaList" style="max-height: 400px;"></ul>
+        <div class="drawer-footer">
+            <button class="btn-primary" onclick="copyAllIdeas()">复制全部</button>
+        </div>
     </div>
+
 
     <script>
-        // --- 1. 核心逻辑 ---
         let allArticles = [];
-        let isContentFetched = false; // 标记是否已加载正文供搜索
-        const container = document.getElementById('articlesContainer');
+        let simulation;
 
         document.addEventListener('DOMContentLoaded', async () => {
-            initParticles(); 
-            initTheme(); // 初始化暗黑模式
-            await loadData(); 
-            feather.replace(); 
+            initTheme();
+            await loadData(); // 加载文章列表
+            feather.replace();
             
-            // 绑定搜索事件
+            window.addEventListener('scroll', () => {
+                const header = document.getElementById('mainHeader');
+                if(window.scrollY > 10) header.classList.add('scrolled');
+                else header.classList.remove('scrolled');
+            });
+            
             document.getElementById('searchInput').addEventListener('input', handleSearch);
         });
 
-        // 1.1 初始化暗黑模式
-        function initTheme() {
-            const isDark = localStorage.getItem('theme') === 'dark';
-            if (isDark) document.body.classList.add('dark-mode');
-            updateThemeIcon();
-        }
-
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-            updateThemeIcon();
-        }
-
-        function updateThemeIcon() {
-            const icon = document.body.classList.contains('dark-mode') ? 'sun' : 'moon';
-            document.getElementById('themeIcon').innerHTML = feather.icons[icon].toSvg();
-        }
-
-        // 1.2 加载基础数据
+        // --- 1. 数据加载 ---
         async function loadData() {
             try {
                 const res = await fetch('articles.json');
-                if (!res.ok) throw new Error('Network response was not ok');
-                
                 allArticles = await res.json();
                 allArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                renderTags();
-                renderArticles(allArticles);
-                
-                // 静默预加载所有正文以供搜索
-                prefetchContents(); 
+                // 初始化两个视图
+                initGraphView(allArticles);
+                renderTimelineView(allArticles);
+
+                document.getElementById('search-status').style.display = 'block';
+                await prefetchContents();
+                document.getElementById('search-status').style.display = 'none';
+
             } catch (error) {
-                console.error('Fetch error:', error);
-                container.innerHTML = `<div style="text-align:center; padding:40px; color:#ef4444;">⚠️ 信号中断</div>`;
+                console.error("Data Load Error", error);
             }
         }
 
-        // 1.3 预加载正文 (用于全文搜索)
         async function prefetchContents() {
             const promises = allArticles.map(async (article) => {
                 try {
                     const res = await fetch(`Article/${article.file}`);
                     if(res.ok) article.fullContent = await res.text();
-                } catch(e) { console.warn('Failed to load content for', article.title); }
+                } catch(e) {}
             });
             await Promise.all(promises);
-            isContentFetched = true;
         }
 
-        // 1.4 处理搜索 (支持标题、标签、正文)
+        // --- 2. 搜索 ---
         function handleSearch(e) {
             const term = e.target.value.toLowerCase().trim();
-            
+            if(term && document.getElementById('graph-view').classList.contains('active')) {
+                switchView('timeline');
+            }
             if (!term) {
-                renderArticles(allArticles);
+                renderTimelineView(allArticles);
+                return;
+            }
+            const filtered = allArticles.filter(a => {
+                const inTitle = a.title.toLowerCase().includes(term);
+                const inTags = (a.tags || []).join(' ').toLowerCase().includes(term);
+                const inExcerpt = (a.excerpt || '').toLowerCase().includes(term);
+                const inContent = (a.fullContent || '').toLowerCase().includes(term);
+                return inTitle || inTags || inExcerpt || inContent;
+            });
+            renderTimelineView(filtered, term);
+        }
+
+        // --- 3. 视图切换 (导航栏内) ---
+        window.switchView = function(viewName) {
+            const graphBtn = document.getElementById('btnGraph');
+            const timelineBtn = document.getElementById('btnTimeline');
+            const graphView = document.getElementById('graph-view');
+            const timelineView = document.getElementById('timeline-view');
+
+            if (viewName === 'graph') {
+                graphBtn.classList.add('active');
+                timelineBtn.classList.remove('active');
+                graphView.classList.add('active');
+                timelineView.classList.remove('active');
+                if(simulation) simulation.alpha(0.3).restart();
+            } else {
+                graphBtn.classList.remove('active');
+                timelineBtn.classList.add('active');
+                graphView.classList.remove('active');
+                timelineView.classList.add('active');
+            }
+        }
+
+        // --- 4. D3.js 知识星空 (优化版) ---
+        function initGraphView(articles) {
+            document.getElementById('graph-loading').style.display = 'none';
+            const container = document.getElementById('d3-container');
+            if(!container) return;
+            
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // 构造数据
+            const nodes = articles.map(a => ({ 
+                id: a.id, 
+                title: a.title, 
+                group: (a.tags?.[0] || 'Misc'), 
+                file: a.file,
+                date: a.date
+            }));
+            
+            const links = [];
+            for (let i = 0; i < articles.length; i++) {
+                for (let j = i + 1; j < articles.length; j++) {
+                    const common = articles[i].tags.filter(tag => articles[j].tags.includes(tag));
+                    if (common.length > 0) links.push({ source: articles[i].id, target: articles[j].id, value: common.length });
+                }
+            }
+
+            const svg = d3.select("#d3-container").append("svg")
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .attr("viewBox", [0, 0, width, height]);
+
+            const color = d3.scaleOrdinal(d3.schemeSet3);
+
+            // 力导向模拟 (优化参数)
+            simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+                .force("charge", d3.forceManyBody().strength(-200)) // 斥力适中
+                .force("collide", d3.forceCollide(25)) // 碰撞检测，防重叠
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                // **关键优化：边界力，防止跑出画布**
+                .force("x", d3.forceX(width / 2).strength(0.05))
+                .force("y", d3.forceY(height / 2).strength(0.05));
+
+            const link = svg.append("g")
+                .attr("stroke", "var(--text-secondary)")
+                .attr("stroke-opacity", 0.15)
+                .selectAll("line").data(links).join("line").attr("stroke-width", d => Math.sqrt(d.value));
+
+            const node = svg.append("g")
+                .selectAll("circle").data(nodes).join("circle")
+                .attr("r", 8)
+                .attr("fill", d => color(d.group))
+                .attr("stroke", "#fff").attr("stroke-width", 1.5)
+                .attr("cursor", "pointer")
+                .call(drag(simulation));
+
+            // 点击跳转
+            node.on("click", (event, d) => {
+                window.location.href = `article.html?file=${d.file}&id=${d.id}`;
+            });
+
+            // 悬停显示 Tooltip
+            node.on("mouseover", function(event, d) {
+                // 放大
+                d3.select(this).transition().duration(200).attr("r", 14).attr("stroke", "var(--primary)");
+                
+                const tooltip = document.getElementById('graphTooltip');
+                tooltip.style.opacity = 1;
+                // 显示必要信息
+                tooltip.innerHTML = `
+                    <div style="font-weight:bold; margin-bottom:4px;">${d.title}</div>
+                    <div style="font-size:0.8rem; opacity:0.8;">
+                        <span>${d.date}</span> · <span>${d.group}</span>
+                    </div>
+                `;
+                
+                // 定位 tooltip 防止溢出
+                let left = event.pageX + 15;
+                let top = event.pageY - 28;
+                if (left + 200 > window.innerWidth) left = event.pageX - 180;
+                
+                tooltip.style.left = left + "px";
+                tooltip.style.top = top + "px";
+            }).on("mouseout", function() {
+                d3.select(this).transition().duration(200).attr("r", 8).attr("stroke", "#fff");
+                document.getElementById('graphTooltip').style.opacity = 0;
+            });
+
+            simulation.on("tick", () => {
+                // 限制节点在画布范围内
+                nodes.forEach(d => {
+                    d.x = Math.max(10, Math.min(width - 10, d.x));
+                    d.y = Math.max(10, Math.min(height - 10, d.y));
+                });
+
+                link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                node.attr("cx", d => d.x).attr("cy", d => d.y);
+            });
+
+            function drag(simulation) {
+                function dragstarted(event) { if (!event.active) simulation.alphaTarget(0.3).restart(); event.subject.fx = event.subject.x; event.subject.fy = event.subject.y; }
+                function dragged(event) { event.subject.fx = event.x; event.subject.fy = event.y; }
+                function dragended(event) { if (!event.active) simulation.alphaTarget(0); event.subject.fx = null; event.subject.fy = null; }
+                return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
+            }
+        }
+
+        // --- 5. 渲染时间轴 ---
+        function renderTimelineView(articles, term = '') {
+            const container = document.getElementById('timeline-view');
+            if(articles.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding: 60px; color: var(--text-secondary);">暂无信号...</p>';
                 return;
             }
 
-            // 简单的搜索状态提示
-            if (!isContentFetched) {
-                // 如果正文还没下载完，暂时只搜标题和Tag
-                console.log('Searching metadata only (content downloading...)');
-            }
-
-            const filtered = allArticles.filter(a => {
-                const inTitle = a.title.toLowerCase().includes(term);
-                const inTags = (a.tags || []).some(t => t.toLowerCase().includes(term));
-                const inExcerpt = (a.excerpt || '').toLowerCase().includes(term);
-                const inContent = (a.fullContent || '').toLowerCase().includes(term);
-                
-                return inTitle || inTags || inExcerpt || inContent;
-            });
-
-            renderArticles(filtered, term);
+            container.innerHTML = articles.map(item => {
+                const link = `article.html?file=${item.file}&id=${item.id}${term ? '&keyword=' + encodeURIComponent(term) : ''}`;
+                return `
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <span class="timeline-date">${item.date}</span>
+                    <h2 class="timeline-title">
+                        <a href="${link}">${item.title}</a>
+                    </h2>
+                    <p class="timeline-excerpt">${item.excerpt || ''}</p>
+                </div>
+            `}).join('');
         }
 
-        // 渲染文章卡片
-        function renderArticles(articles, highlightTerm = '') {
-            container.style.opacity = '0';
+        // --- 灵感 Modal 逻辑 ---
+        function toggleInspirationModal() {
+            const drawer = document.getElementById('homeInspirationDrawer');
+            const overlay = document.getElementById('inspirationOverlay');
+            const isActive = drawer.style.opacity === '1';
             
-            if (!articles || articles.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-secondary);">没有找到相关的信号...</div>';
+            if (!isActive) {
+                renderHomeIdeas();
+                drawer.style.opacity = '1';
+                drawer.style.pointerEvents = 'auto';
+                drawer.style.transform = 'translate(-50%, -50%) scale(1)';
+                overlay.classList.add('active');
             } else {
-                container.innerHTML = articles.map(article => {
-                    const tagsHtml = (article.tags || []).map(tag => `<span class="meta-tag">${tag}</span>`).join('');
-                    return `
-                        <article class="article-card">
-                            <div class="article-meta">
-                                <span><i data-feather="calendar" style="width:12px"></i> ${article.date}</span>
-                                ${tagsHtml}
-                            </div>
-                            <h2><a href="article.html?id=${article.id}&file=${article.file}&keyword=${highlightTerm}">${article.title}</a></h2>
-                            <p class="article-excerpt">${article.excerpt || '暂无摘要'}</p>
-                        </article>
-                    `;
-                }).join('');
+                drawer.style.opacity = '0';
+                drawer.style.pointerEvents = 'none';
+                drawer.style.transform = 'translate(-50%, -50%) scale(0.9)';
+                overlay.classList.remove('active');
             }
-            
-            feather.replace();
-            setTimeout(() => {
-                container.style.transition = 'opacity 0.3s ease';
-                container.style.opacity = '1';
-            }, 50);
         }
 
-        // 渲染标签云
-        function renderTags() {
-            const tagsMap = new Map();
-            allArticles.forEach(article => {
-                (article.tags || []).forEach(tag => {
-                    tagsMap.set(tag, (tagsMap.get(tag) || 0) + 1);
-                });
-            });
-
-            const tagsContainer = document.getElementById('tagsContainer');
-            let html = `<span class="tag-item active" onclick="filterArticles('all', this)">全部</span>`;
-            tagsMap.forEach((count, tag) => {
-                html += `<span class="tag-item" onclick="filterArticles('${tag}', this)">#${tag} <small>(${count})</small></span>`;
-            });
-            tagsContainer.innerHTML = html;
+        function renderHomeIdeas() {
+            const ideas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
+            const list = document.getElementById('homeIdeaList');
+            if (ideas.length === 0) {
+                list.innerHTML = '<li style="text-align:center; padding:20px; color:var(--text-secondary);">暂无灵感记录</li>';
+                return;
+            }
+            // 首页显示所有
+            list.innerHTML = ideas.reverse().map(idea => `
+                <li class="idea-item">
+                    <div class="idea-content-text">${idea.content}</div>
+                    <div class="idea-meta">
+                        <span>${idea.date} · 来自《${idea.source}》</span>
+                    </div>
+                </li>
+            `).join('');
+        }
+        
+        function copyAllIdeas() {
+            const ideas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
+            const text = ideas.map(i => `> ${i.content}\n(From: ${i.source} @ ${i.date})`).join('\n\n');
+            navigator.clipboard.writeText(text).then(() => alert('已复制全部'));
         }
 
-        // 筛选功能
-        window.filterArticles = function(tag, element) {
-            document.querySelectorAll('.tag-item').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
-            document.getElementById('searchInput').value = ''; // 清空搜索框
-
-            if (tag === 'all') {
-                renderArticles(allArticles);
-            } else {
-                const filtered = allArticles.filter(a => a.tags && a.tags.includes(tag));
-                renderArticles(filtered);
-            }
-        };
-
-        // --- 2. 粒子效果配置 ---
-        function initParticles() {
-            particlesJS('particles-js', {
-                "particles": {
-                    "number": { "value": 60 },
-                    "color": { "value": ["#2563eb", "#64748b"] }, // 适配主题色
-                    "shape": { "type": "circle" },
-                    "opacity": { "value": 0.5, "random": true },
-                    "size": { "value": 3, "random": true },
-                    "line_linked": { "enable": true, "distance": 150, "color": "#a1a1aa", "opacity": 0.3, "width": 1 },
-                    "move": { "enable": true, "speed": 1 }
-                },
-                "interactivity": {
-                    "detect_on": "canvas",
-                    "events": { "onhover": { "enable": true, "mode": "grab" } }
-                },
-                "retina_detect": true
-            });
+        // 主题逻辑
+        function initTheme() {
+            const isDark = localStorage.getItem('theme') === 'dark';
+            if (isDark) document.body.classList.add('dark-mode');
+            updateThemeIcon();
+        }
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const icon = document.body.classList.contains('dark-mode') ? 'sun' : 'moon';
+            document.getElementById('themeIcon').innerHTML = feather.icons[icon].toSvg({ width: 18 });
         }
     </script>
 </body>

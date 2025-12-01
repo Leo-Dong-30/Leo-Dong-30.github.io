@@ -1,185 +1,213 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>文章阅读 - Leo's Blog</title>
-    <link rel="stylesheet" href="style.css" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阅读 | Leo's Blog</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js"></script>
     <script src="https://unpkg.com/feather-icons"></script>
-  </head>
-  <body>
-    <div id="progress-bar"></div>
+</head>
+<body>
 
     <header class="header">
-      <div class="logo"><a href="index.html">Leo's Blog</a></div>
-      <nav class="nav">
-        <a href="index.html"
-          ><i data-feather="arrow-left" style="vertical-align: -2px"></i>
-          返回首页</a
-        >
-        <a href="#" onclick="toggleTheme()" title="切换日/夜模式"
-          ><i data-feather="moon" id="themeIcon"></i
-        ></a>
-      </nav>
+        <div class="logo"><a href="index.html">Leo's Log</a></div>
+        <nav class="nav">
+            <a href="index.html" style="font-size: 0.9rem; display: flex; align-items: center;">
+                <i data-feather="arrow-left" style="width: 16px; margin-right: 4px;"></i> 返回
+            </a>
+            <button class="nav-icon-btn" onclick="toggleTheme()" title="日/夜模式">
+                <i data-feather="moon" id="themeIcon" width="18"></i>
+            </button>
+        </nav>
     </header>
 
-    <div class="article-container">
-      <div class="article-header" id="headerInfo">
-        <h1 id="articleTitle">加载中...</h1>
-        <div
-          class="article-meta"
-          style="justify-content: center"
-          id="articleMeta"
-        ></div>
-      </div>
-
-      <div class="markdown-body" id="content">
-        <div
-          style="
-            text-align: center;
-            padding: 50px;
-            color: var(--text-secondary);
-          "
-        >
-          <i data-feather="loader" class="spin"></i> 文章渲染中...
+    <div style="max-width: 900px; margin: 40px auto; padding: 0 20px;">
+        <div class="article-header">
+            <h1 id="articleTitle">加载中...</h1>
+            <div id="articleMeta" style="text-align: center; color: var(--text-secondary); margin-bottom: 40px; font-family: var(--font-sans);"></div>
         </div>
-      </div>
+
+        <div class="markdown-body" id="content">
+            <!-- 内容区 -->
+        </div>
+    </div>
+
+    <!-- 灵感速记与查看 -->
+    <div class="inspiration-fab" onclick="toggleInspiration()" title="灵感记录">
+        <i data-feather="edit-2"></i>
+    </div>
+    
+    <div class="inspiration-drawer" id="inspirationDrawer">
+        <div class="drawer-top">
+            <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: var(--primary);">
+                <i data-feather="zap" style="width:14px;"></i> 捕捉当前灵感
+            </h4>
+            <textarea id="ideaInput" placeholder="记录下你的联想... (Ctrl+Enter保存)"></textarea>
+            <div style="text-align: right; margin-top: 8px;">
+                <button class="btn-primary" onclick="saveIdea()">保存</button>
+            </div>
+        </div>
+        
+        <div style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); background: var(--bg-panel); font-size: 0.85rem; font-weight: bold; color: var(--text-secondary);">
+            本文相关碎片
+        </div>
+        
+        <ul class="drawer-list" id="ideaList">
+            <!-- 历史记录 JS 渲染 -->
+        </ul>
     </div>
 
     <script>
-      // --- 0. 主题逻辑 ---
-      document.addEventListener("DOMContentLoaded", () => {
-        initTheme();
-        feather.replace();
-        loadArticle();
-      });
+        const params = new URLSearchParams(window.location.search);
+        const fileName = params.get("file");
+        const keyword = params.get("keyword"); 
+        let currentArticleTitle = ""; // 用于过滤
 
-      function initTheme() {
-        const isDark = localStorage.getItem("theme") === "dark";
-        if (isDark) document.body.classList.add("dark-mode");
-        updateThemeIcon();
-      }
+        document.addEventListener('DOMContentLoaded', async () => {
+            initTheme();
+            feather.replace();
+            
+            document.getElementById('ideaInput').addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveIdea();
+            });
 
-      function toggleTheme() {
-        document.body.classList.toggle("dark-mode");
-        localStorage.setItem(
-          "theme",
-          document.body.classList.contains("dark-mode") ? "dark" : "light"
-        );
-        updateThemeIcon();
-      }
-
-      function updateThemeIcon() {
-        const icon = document.body.classList.contains("dark-mode")
-          ? "sun"
-          : "moon";
-        document.getElementById("themeIcon").innerHTML = feather.icons[
-          icon
-        ].toSvg({ width: 18 });
-      }
-
-      // 获取 URL 参数
-      const params = new URLSearchParams(window.location.search);
-      const fileName = params.get("file");
-      const id = params.get("id");
-      const keyword = params.get("keyword");
-
-      // --- 1. 阅读进度条 ---
-      window.addEventListener("scroll", () => {
-        const scrollTop =
-          document.documentElement.scrollTop || document.body.scrollTop;
-        const scrollHeight =
-          document.documentElement.scrollHeight -
-          document.documentElement.clientHeight;
-        const scrolled = (scrollTop / scrollHeight) * 100;
-        document.getElementById("progress-bar").style.width = scrolled + "%";
-      });
-
-      // --- 2. 文章加载 ---
-      async function loadArticle() {
-        if (!fileName) {
-          showError("文章参数丢失", "请返回首页重新进入。");
-          return;
-        }
-
-        try {
-          const [markdown, articlesData] = await Promise.all([
-            fetch(`Article/${fileName}`).then((res) => {
-              if (!res.ok) throw new Error("File not found");
-              return res.text();
-            }),
-            fetch("articles.json").then((res) => (res.ok ? res.json() : [])),
-          ]);
-
-          renderContent(markdown);
-          renderMetadata(articlesData, markdown);
-
-          // 高亮关键词
-          if (keyword) {
-            const instance = new Mark(document.querySelector(".markdown-body"));
-            instance.mark(keyword);
-          }
-          
-        } catch (error) {
-          console.error("Load Article Error:", error);
-          showError(
-            "无法加载文章",
-            `找不到文件 <code>Article/${fileName}</code> 或网络错误。`
-          );
-        }
-      }
-
-      function renderContent(markdown) {
-        const contentEl = document.getElementById("content");
-        contentEl.innerHTML = marked.parse(markdown);
-
-        contentEl.querySelectorAll("img").forEach((img) => {
-          const src = img.getAttribute("src");
-          if (src && !src.startsWith("http") && !src.startsWith("/")) {
-            img.src = `Article/${src}`;
-          }
+            if(fileName) await loadArticle(fileName);
         });
-      }
 
-      function renderMetadata(articles, markdown) {
-        const meta = articles.find((a) => a.file === fileName || a.id === id);
-        const titleEl = document.getElementById("articleTitle");
-        const metaEl = document.getElementById("articleMeta");
+        async function loadArticle(file) {
+            try {
+                const [text, metaRes] = await Promise.all([
+                    fetch(`Article/${file}`).then(r => r.text()),
+                    fetch('articles.json').then(r => r.json())
+                ]);
 
-        if (meta) {
-          document.title = `${meta.title} - Leo's Blog`;
-          titleEl.innerText = meta.title;
-          const tagsHtml = (meta.tags || [])
-            .map((t) => `<span class="meta-tag">#${t}</span>`)
-            .join(" ");
-          metaEl.innerHTML = `
-            <span><i data-feather="calendar" style="width:14px;"></i> ${meta.date}</span>
-            ${tagsHtml}
-          `;
-        } else {
-          const firstLine = markdown.split("\n")[0];
-          const extractedTitle = firstLine.startsWith("# ")
-            ? firstLine.replace("# ", "")
-            : "未命名文章";
-          titleEl.innerText = extractedTitle;
-          document.title = extractedTitle;
-          metaEl.innerHTML = `<span><i data-feather="file-text"></i> 未录入元数据</span>`;
+                const contentEl = document.getElementById('content');
+                contentEl.innerHTML = marked.parse(text);
+                
+                if (keyword) {
+                    const instance = new Mark(contentEl);
+                    instance.mark(keyword, { element: "mark", className: "highlight" });
+                    setTimeout(() => {
+                        const firstMark = document.querySelector('mark');
+                        if(firstMark) firstMark.scrollIntoView({behavior: "smooth", block: "center"});
+                    }, 500);
+                }
+
+                const meta = metaRes.find(a => a.file === file);
+                if(meta) {
+                    currentArticleTitle = meta.title; // 记录当前标题用于过滤灵感
+                    document.title = meta.title;
+                    document.getElementById('articleTitle').innerText = meta.title;
+                    document.getElementById('articleMeta').innerHTML = `
+                        <span>${meta.date}</span> &middot; 
+                        ${(meta.tags||[]).map(t => `#${t}`).join(' ')}
+                    `;
+                } else {
+                    currentArticleTitle = "未知文章";
+                }
+                
+                // 加载完成后渲染灵感
+                renderIdeas();
+                
+            } catch(e) {
+                document.getElementById('content').innerText = "文章加载失败，可能路径已迷失。";
+                console.error(e);
+            }
         }
-        feather.replace();
-      }
 
-      function showError(title, message) {
-        document.getElementById("articleTitle").innerText = "404 Error";
-        document.getElementById("content").innerHTML = `
-          <div style="color: #ef4444; text-align: center; padding: 40px; background: rgba(239,68,68,0.1); border-radius: 8px;">
-            <h3>${title}</h3>
-            <p>${message}</p>
-          </div>
-        `;
-        document.getElementById("articleMeta").innerHTML = "";
-      }
+        // --- 灵感记录逻辑 (精准过滤 & 单独操作) ---
+        function toggleInspiration() {
+            document.getElementById('inspirationDrawer').classList.toggle('active');
+        }
+
+        function saveIdea() {
+            const input = document.getElementById('ideaInput');
+            const text = input.value.trim();
+            if(!text) return;
+
+            const idea = {
+                id: Date.now(), // 唯一ID
+                date: new Date().toLocaleString(),
+                source: currentArticleTitle, // 绑定来源
+                content: text
+            };
+
+            const ideas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
+            ideas.push(idea);
+            localStorage.setItem('leo_ideas', JSON.stringify(ideas));
+
+            input.value = '';
+            renderIdeas();
+        }
+
+        function renderIdeas() {
+            const allIdeas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
+            
+            // **核心修改：只过滤出当前文章的灵感**
+            const currentIdeas = allIdeas.filter(i => i.source === currentArticleTitle);
+            
+            const list = document.getElementById('ideaList');
+            
+            if(currentIdeas.length === 0) {
+                list.innerHTML = '<li style="text-align:center; padding:20px; color:var(--text-secondary);">本文暂无记录</li>';
+                return;
+            }
+
+            // 渲染列表，包含隐藏的操作图标
+            list.innerHTML = currentIdeas.reverse().map(idea => `
+                <li class="idea-item">
+                    <div class="idea-content-text">${idea.content}</div>
+                    <div class="idea-meta">
+                        <span>${idea.date}</span>
+                        <div class="idea-actions">
+                            <span class="idea-action-btn" onclick="copyOneIdea('${idea.content}')" title="复制">
+                                <i data-feather="copy" width="14"></i>
+                            </span>
+                            <span class="idea-action-btn" onclick="deleteOneIdea(${idea.id})" title="删除">
+                                <i data-feather="trash-2" width="14"></i>
+                            </span>
+                        </div>
+                    </div>
+                </li>
+            `).join('');
+            
+            feather.replace(); // 重新渲染新插入的图标
+        }
+
+        function copyOneIdea(content) {
+             navigator.clipboard.writeText(content).then(() => {
+                 // 简单的视觉反馈
+                 alert("已复制到剪贴板");
+             });
+        }
+
+        function deleteOneIdea(id) {
+            if(!confirm("确认删除这条灵感吗？")) return;
+            
+            let allIdeas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
+            allIdeas = allIdeas.filter(i => i.id !== id);
+            localStorage.setItem('leo_ideas', JSON.stringify(allIdeas));
+            
+            renderIdeas(); // 刷新列表
+        }
+
+        // 主题逻辑
+        function initTheme() {
+            const isDark = localStorage.getItem('theme') === 'dark';
+            if (isDark) document.body.classList.add('dark-mode');
+            updateThemeIcon();
+        }
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const icon = document.body.classList.contains('dark-mode') ? 'sun' : 'moon';
+            document.getElementById('themeIcon').innerHTML = feather.icons[icon].toSvg({ width: 18 });
+        }
     </script>
-  </body>
+</body>
 </html>
