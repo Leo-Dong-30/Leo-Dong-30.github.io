@@ -72,7 +72,10 @@
         <!-- 视图 A：知识星空 -->
         <div id="graph-view" class="active">
             <div id="d3-container" style="width:100%; height:100%;"></div>
-            <div class="graph-tooltip" id="graphTooltip"></div>
+            
+            <!-- 升级后的悬浮卡片容器 -->
+            <div class="graph-popover" id="graphPopover"></div>
+            
             <div id="graph-loading" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); color: var(--text-secondary);">
                 <i data-feather="loader" class="spin"></i> 星图构建中...
             </div>
@@ -197,13 +200,15 @@
             const width = container.clientWidth;
             const height = container.clientHeight;
 
-            // 构造数据
+            // 构造数据：确保包含 excerpt 用于卡片展示
             const nodes = articles.map(a => ({ 
                 id: a.id, 
                 title: a.title, 
+                tags: a.tags,
                 group: (a.tags?.[0] || 'Misc'), 
                 file: a.file,
-                date: a.date
+                date: a.date,
+                excerpt: a.excerpt // 新增摘要字段
             }));
             
             const links = [];
@@ -227,7 +232,6 @@
                 .force("charge", d3.forceManyBody().strength(-200)) // 斥力适中
                 .force("collide", d3.forceCollide(25)) // 碰撞检测，防重叠
                 .force("center", d3.forceCenter(width / 2, height / 2))
-                // **关键优化：边界力，防止跑出画布**
                 .force("x", d3.forceX(width / 2).strength(0.05))
                 .force("y", d3.forceY(height / 2).strength(0.05));
 
@@ -249,31 +253,58 @@
                 window.location.href = `article.html?file=${d.file}&id=${d.id}`;
             });
 
-            // 悬停显示 Tooltip
+            // 悬停显示 卡片 (Popover Card)
             node.on("mouseover", function(event, d) {
-                // 放大
-                d3.select(this).transition().duration(200).attr("r", 14).attr("stroke", "var(--primary)");
+                // 1. 节点高亮
+                d3.select(this).transition().duration(300)
+                    .attr("r", 12)
+                    .attr("stroke", "var(--primary)")
+                    .attr("stroke-width", 3);
                 
-                const tooltip = document.getElementById('graphTooltip');
-                tooltip.style.opacity = 1;
-                // 显示必要信息
-                tooltip.innerHTML = `
-                    <div style="font-weight:bold; margin-bottom:4px;">${d.title}</div>
-                    <div style="font-size:0.8rem; opacity:0.8;">
-                        <span>${d.date}</span> · <span>${d.group}</span>
+                // 2. 填充卡片内容
+                const popover = document.getElementById('graphPopover');
+                popover.className = 'graph-popover visible'; // 添加 visible 类触发动画
+                
+                const tagsHtml = d.tags.map(tag => `<span class="popover-tag">${tag}</span>`).join(' ');
+
+                popover.innerHTML = `
+                    <div class="popover-meta">
+                        <span class="popover-tags-container">${tagsHtml}</span>
+                        <span>${d.date}</span>
                     </div>
+                    <h3 class="popover-title">${d.title}</h3>
+                    <div class="popover-excerpt">${d.excerpt || '点击探索详情...'}</div>
                 `;
                 
-                // 定位 tooltip 防止溢出
-                let left = event.pageX + 15;
-                let top = event.pageY - 28;
-                if (left + 200 > window.innerWidth) left = event.pageX - 180;
+                // 3. 智能定位 (防止溢出屏幕)
+                const cardWidth = 300; // 对应 CSS 宽度
+                const cardHeight = popover.offsetHeight || 160; // 估算或获取高度
                 
-                tooltip.style.left = left + "px";
-                tooltip.style.top = top + "px";
+                let left = event.clientX + 20;
+                let top = event.clientY - 20;
+
+                // 右边界检查
+                if (left + cardWidth > window.innerWidth) {
+                    left = event.clientX - cardWidth - 20;
+                }
+                // 下边界检查
+                if (top + cardHeight > window.innerHeight) {
+                    top = window.innerHeight - cardHeight - 20;
+                }
+                
+                popover.style.left = left + "px";
+                popover.style.top = top + "px";
+
             }).on("mouseout", function() {
-                d3.select(this).transition().duration(200).attr("r", 8).attr("stroke", "#fff");
-                document.getElementById('graphTooltip').style.opacity = 0;
+                // 恢复节点样式
+                d3.select(this).transition().duration(300)
+                    .attr("r", 8)
+                    .attr("stroke", "#fff")
+                    .attr("stroke-width", 1.5);
+                
+                // 隐藏卡片
+                const popover = document.getElementById('graphPopover');
+                popover.className = 'graph-popover'; // 移除 visible
             });
 
             simulation.on("tick", () => {
