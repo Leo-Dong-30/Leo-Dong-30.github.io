@@ -1,4 +1,15 @@
 [
+
+{
+    "id": "nation",
+    "file": "nation.md",
+    "title": "民族创伤评述（摘录）",
+    "date": "2025-12-22",
+    "tags": [
+        "民族", "创伤", "性格"
+    ],
+    "excerpt": "民族的集体创伤如何影响现代人的生活？"
+},
   {
     "id": "Bayes-3",
     "file": "Bayes-3.md",
