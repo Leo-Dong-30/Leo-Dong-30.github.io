@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阅读 | Leo's Blog</title>
+    <title>阅读</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js"></script>
@@ -12,7 +12,7 @@
 <body>
 
     <header class="header">
-        <div class="logo"><a href="index.html">Leo's Log</a></div>
+        <div class="logo"><a href="index.html">穿行</a></div>
         <nav class="nav">
             <a href="index.html" style="font-size: 0.9rem; display: flex; align-items: center;">
                 <i data-feather="arrow-left" style="width: 16px; margin-right: 4px;"></i> 返回
@@ -30,52 +30,22 @@
         </div>
 
         <div class="markdown-body" id="content">
-            <!-- 内容区 -->
-        </div>
-    </div>
-
-    <!-- 灵感速记与查看 -->
-    <div class="inspiration-fab" onclick="toggleInspiration()" title="灵感记录">
-        <i data-feather="edit-2"></i>
-    </div>
-    
-    <div class="inspiration-drawer" id="inspirationDrawer">
-        <div class="drawer-top">
-            <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: var(--primary);">
-                <i data-feather="zap" style="width:14px;"></i> 捕捉当前灵感
-            </h4>
-            <textarea id="ideaInput" placeholder="记录下你的联想... (Ctrl+Enter保存)"></textarea>
-            <div style="text-align: right; margin-top: 8px;">
-                <button class="btn-primary" onclick="saveIdea()">保存</button>
             </div>
-        </div>
-        
-        <div style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); background: var(--bg-panel); font-size: 0.85rem; font-weight: bold; color: var(--text-secondary);">
-            本文相关碎片
-        </div>
-        
-        <ul class="drawer-list" id="ideaList">
-            <!-- 历史记录 JS 渲染 -->
-        </ul>
     </div>
 
     <script>
         const params = new URLSearchParams(window.location.search);
         const fileName = params.get("file");
         const keyword = params.get("keyword"); 
-        let currentArticleTitle = ""; // 用于过滤
 
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme();
             feather.replace();
             
-            document.getElementById('ideaInput').addEventListener('keydown', (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveIdea();
-            });
-
             if(fileName) await loadArticle(fileName);
         });
 
+        // --- 1. 文章加载与渲染 ---
         async function loadArticle(file) {
             try {
                 const [text, metaRes] = await Promise.all([
@@ -86,6 +56,7 @@
                 const contentEl = document.getElementById('content');
                 contentEl.innerHTML = marked.parse(text);
                 
+                // 关键词高亮逻辑
                 if (keyword) {
                     const instance = new Mark(contentEl);
                     instance.mark(keyword, { element: "mark", className: "highlight" });
@@ -95,21 +66,16 @@
                     }, 500);
                 }
 
+                // 填充文章元数据
                 const meta = metaRes.find(a => a.file === file);
                 if(meta) {
-                    currentArticleTitle = meta.title; // 记录当前标题用于过滤灵感
                     document.title = meta.title;
                     document.getElementById('articleTitle').innerText = meta.title;
                     document.getElementById('articleMeta').innerHTML = `
                         <span>${meta.date}</span> &middot; 
                         ${(meta.tags||[]).map(t => `#${t}`).join(' ')}
                     `;
-                } else {
-                    currentArticleTitle = "未知文章";
                 }
-                
-                // 加载完成后渲染灵感
-                renderIdeas();
                 
             } catch(e) {
                 document.getElementById('content').innerText = "文章加载失败，可能路径已迷失。";
@@ -117,93 +83,19 @@
             }
         }
 
-        // --- 灵感记录逻辑 (精准过滤 & 单独操作) ---
-        function toggleInspiration() {
-            document.getElementById('inspirationDrawer').classList.toggle('active');
-        }
-
-        function saveIdea() {
-            const input = document.getElementById('ideaInput');
-            const text = input.value.trim();
-            if(!text) return;
-
-            const idea = {
-                id: Date.now(), // 唯一ID
-                date: new Date().toLocaleString(),
-                source: currentArticleTitle, // 绑定来源
-                content: text
-            };
-
-            const ideas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
-            ideas.push(idea);
-            localStorage.setItem('leo_ideas', JSON.stringify(ideas));
-
-            input.value = '';
-            renderIdeas();
-        }
-
-        function renderIdeas() {
-            const allIdeas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
-            
-            // **核心修改：只过滤出当前文章的灵感**
-            const currentIdeas = allIdeas.filter(i => i.source === currentArticleTitle);
-            
-            const list = document.getElementById('ideaList');
-            
-            if(currentIdeas.length === 0) {
-                list.innerHTML = '<li style="text-align:center; padding:20px; color:var(--text-secondary);">本文暂无记录</li>';
-                return;
-            }
-
-            // 渲染列表，包含隐藏的操作图标
-            list.innerHTML = currentIdeas.reverse().map(idea => `
-                <li class="idea-item">
-                    <div class="idea-content-text">${idea.content}</div>
-                    <div class="idea-meta">
-                        <span>${idea.date}</span>
-                        <div class="idea-actions">
-                            <span class="idea-action-btn" onclick="copyOneIdea('${idea.content}')" title="复制">
-                                <i data-feather="copy" width="14"></i>
-                            </span>
-                            <span class="idea-action-btn" onclick="deleteOneIdea(${idea.id})" title="删除">
-                                <i data-feather="trash-2" width="14"></i>
-                            </span>
-                        </div>
-                    </div>
-                </li>
-            `).join('');
-            
-            feather.replace(); // 重新渲染新插入的图标
-        }
-
-        function copyOneIdea(content) {
-             navigator.clipboard.writeText(content).then(() => {
-                 // 简单的视觉反馈
-                 alert("已复制到剪贴板");
-             });
-        }
-
-        function deleteOneIdea(id) {
-            if(!confirm("确认删除这条灵感吗？")) return;
-            
-            let allIdeas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
-            allIdeas = allIdeas.filter(i => i.id !== id);
-            localStorage.setItem('leo_ideas', JSON.stringify(allIdeas));
-            
-            renderIdeas(); // 刷新列表
-        }
-
-        // 主题逻辑
+        // --- 2. 基础功能：主题切换 ---
         function initTheme() {
             const isDark = localStorage.getItem('theme') === 'dark';
             if (isDark) document.body.classList.add('dark-mode');
             updateThemeIcon();
         }
+
         function toggleTheme() {
             document.body.classList.toggle('dark-mode');
             localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
             updateThemeIcon();
         }
+
         function updateThemeIcon() {
             const icon = document.body.classList.contains('dark-mode') ? 'sun' : 'moon';
             document.getElementById('themeIcon').innerHTML = feather.icons[icon].toSvg({ width: 18 });

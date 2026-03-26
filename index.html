@@ -1,59 +1,42 @@
-# 计划删除
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>探索 | Leo's Universe</title>
+    <title>穿行冷风</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/feather-icons"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
 
-    <!-- Header 改造：集成视图切换，图表化风格 -->
     <header class="header" id="mainHeader">
         <div class="logo">
-            <i data-feather=""></i> <a href="index.html">Leo's Log</a>
+            <i data-feather=""></i> <a href="index.html">穿行</a>
         </div>
         
         <nav class="nav">
-            <!-- 视图切换：知识星空 -->
             <button class="nav-icon-btn active" id="btnGraph" onclick="switchView('graph')" title="知识星空">
                 <i data-feather="share-2" width="18"></i>
             </button>
-            <!-- 视图切换：徒步路径 -->
             <button class="nav-icon-btn" id="btnTimeline" onclick="switchView('timeline')" title="徒步路径">
                 <i data-feather="list" width="18"></i>
             </button>
             
             <div class="nav-divider"></div>
 
-            <button class="nav-icon-btn" onclick="toggleInspirationModal()" title="灵感集">
-                <i data-feather="zap" width="18"></i>
-            </button>
             <button class="nav-icon-btn" onclick="toggleTheme()" title="日/夜模式">
                 <i data-feather="moon" id="themeIcon" width="18"></i>
             </button>
-
-            <div class="nav-divider"></div>
-
-            <a href="editor.html" class="nav-write-btn">
-                <i data-feather="pen-tool" style="width:14px"></i> 记录
-            </a>
         </nav>
     </header>
 
     <div class="hero" style="text-align: center; padding: 80px 20px 40px; position: relative; z-index: 10;">
-        <h1 style="font-family: var(--font-serif); font-size: 3.5rem; margin-bottom: 20px; letter-spacing: -1px; opacity: 0.9;">
-            世界在脚下，星空在头顶
-        </h1>
         <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto; font-style: italic; font-size: 1.1rem;">
             "Not all those who wander are lost."
         </p>
     </div>
 
-    <!-- 搜索框 -->
     <div class="search-wrapper" style="margin-bottom: 60px; text-align: center; position: relative; z-index: 20;">
         <div style="position: relative; display: inline-block; width: 100%; max-width: 420px;">
             <i data-feather="search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); width: 18px;"></i>
@@ -70,11 +53,9 @@
 
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
         
-        <!-- 视图 A：知识星空 -->
         <div id="graph-view" class="active">
             <div id="d3-container" style="width:100%; height:100%;"></div>
             
-            <!-- 升级后的悬浮卡片容器 -->
             <div class="graph-popover" id="graphPopover"></div>
             
             <div id="graph-loading" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); color: var(--text-secondary);">
@@ -82,26 +63,10 @@
             </div>
         </div>
 
-        <!-- 视图 B：徒步路径 (列表) -->
         <div id="timeline-view">
-            <!-- JS 渲染列表 -->
-        </div>
+            </div>
 
     </div>
-
-    <!-- 首页灵感 Modal -->
-    <div class="overlay" id="inspirationOverlay" onclick="toggleInspirationModal()"></div>
-    <div class="inspiration-drawer" id="homeInspirationDrawer" style="position: fixed; top: 50%; left: 50%; bottom: auto; right: auto; transform: translate(-50%, -50%) scale(0.9); width: 500px; opacity: 0; pointer-events: none; transition: all 0.3s;">
-        <div class="drawer-top" style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; color: var(--text-main);">全站灵感碎片</h3>
-            <button class="btn-ghost" onclick="toggleInspirationModal()"><i data-feather="x"></i></button>
-        </div>
-        <ul class="drawer-list" id="homeIdeaList" style="max-height: 400px;"></ul>
-        <div class="drawer-footer">
-            <button class="btn-primary" onclick="copyAllIdeas()">复制全部</button>
-        </div>
-    </div>
-
 
     <script>
         let allArticles = [];
@@ -128,7 +93,6 @@
                 allArticles = await res.json();
                 allArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                // 初始化两个视图
                 initGraphView(allArticles);
                 renderTimelineView(allArticles);
 
@@ -151,7 +115,7 @@
             await Promise.all(promises);
         }
 
-        // --- 2. 搜索 ---
+        // --- 2. 搜索逻辑 ---
         function handleSearch(e) {
             const term = e.target.value.toLowerCase().trim();
             if(term && document.getElementById('graph-view').classList.contains('active')) {
@@ -171,7 +135,7 @@
             renderTimelineView(filtered, term);
         }
 
-        // --- 3. 视图切换 (导航栏内) ---
+        // --- 3. 视图切换 ---
         window.switchView = function(viewName) {
             const graphBtn = document.getElementById('btnGraph');
             const timelineBtn = document.getElementById('btnTimeline');
@@ -192,7 +156,7 @@
             }
         }
 
-        // --- 4. D3.js 知识星空 (优化版) ---
+        // --- 4. D3.js 知识星空核心逻辑 ---
         function initGraphView(articles) {
             document.getElementById('graph-loading').style.display = 'none';
             const container = document.getElementById('d3-container');
@@ -201,7 +165,6 @@
             const width = container.clientWidth;
             const height = container.clientHeight;
 
-            // 构造数据：确保包含 excerpt 用于卡片展示
             const nodes = articles.map(a => ({ 
                 id: a.id, 
                 title: a.title, 
@@ -209,7 +172,7 @@
                 group: (a.tags?.[0] || 'Misc'), 
                 file: a.file,
                 date: a.date,
-                excerpt: a.excerpt // 新增摘要字段
+                excerpt: a.excerpt
             }));
             
             const links = [];
@@ -227,14 +190,11 @@
 
             const color = d3.scaleOrdinal(d3.schemeSet3);
 
-            // 力导向模拟 (优化参数)
             simulation = d3.forceSimulation(nodes)
                 .force("link", d3.forceLink(links).id(d => d.id).distance(100))
-                .force("charge", d3.forceManyBody().strength(-200)) // 斥力适中
-                .force("collide", d3.forceCollide(25)) // 碰撞检测，防重叠
-                .force("center", d3.forceCenter(width / 2, height / 2))
-                .force("x", d3.forceX(width / 2).strength(0.05))
-                .force("y", d3.forceY(height / 2).strength(0.05));
+                .force("charge", d3.forceManyBody().strength(-200))
+                .force("collide", d3.forceCollide(25))
+                .force("center", d3.forceCenter(width / 2, height / 2));
 
             const link = svg.append("g")
                 .attr("stroke", "var(--text-secondary)")
@@ -249,23 +209,15 @@
                 .attr("cursor", "pointer")
                 .call(drag(simulation));
 
-            // 点击跳转
             node.on("click", (event, d) => {
                 window.location.href = `article.html?file=${d.file}&id=${d.id}`;
             });
 
-            // 悬停显示 卡片 (Popover Card)
             node.on("mouseover", function(event, d) {
-                // 1. 节点高亮
-                d3.select(this).transition().duration(300)
-                    .attr("r", 12)
-                    .attr("stroke", "var(--primary)")
-                    .attr("stroke-width", 3);
+                d3.select(this).transition().duration(300).attr("r", 12).attr("stroke", "var(--primary)").attr("stroke-width", 3);
                 
-                // 2. 填充卡片内容
                 const popover = document.getElementById('graphPopover');
-                popover.className = 'graph-popover visible'; // 添加 visible 类触发动画
-                
+                popover.className = 'graph-popover visible';
                 const tagsHtml = d.tags.map(tag => `<span class="popover-tag">${tag}</span>`).join(' ');
 
                 popover.innerHTML = `
@@ -277,44 +229,18 @@
                     <div class="popover-excerpt">${d.excerpt || '点击探索详情...'}</div>
                 `;
                 
-                // 3. 智能定位 (防止溢出屏幕)
-                const cardWidth = 300; // 对应 CSS 宽度
-                const cardHeight = popover.offsetHeight || 160; // 估算或获取高度
-                
                 let left = event.clientX + 20;
                 let top = event.clientY - 20;
-
-                // 右边界检查
-                if (left + cardWidth > window.innerWidth) {
-                    left = event.clientX - cardWidth - 20;
-                }
-                // 下边界检查
-                if (top + cardHeight > window.innerHeight) {
-                    top = window.innerHeight - cardHeight - 20;
-                }
-                
+                if (left + 300 > window.innerWidth) left = event.clientX - 320;
                 popover.style.left = left + "px";
                 popover.style.top = top + "px";
 
             }).on("mouseout", function() {
-                // 恢复节点样式
-                d3.select(this).transition().duration(300)
-                    .attr("r", 8)
-                    .attr("stroke", "#fff")
-                    .attr("stroke-width", 1.5);
-                
-                // 隐藏卡片
-                const popover = document.getElementById('graphPopover');
-                popover.className = 'graph-popover'; // 移除 visible
+                d3.select(this).transition().duration(300).attr("r", 8).attr("stroke", "#fff").attr("stroke-width", 1.5);
+                document.getElementById('graphPopover').className = 'graph-popover';
             });
 
             simulation.on("tick", () => {
-                // 限制节点在画布范围内
-                nodes.forEach(d => {
-                    d.x = Math.max(10, Math.min(width - 10, d.x));
-                    d.y = Math.max(10, Math.min(height - 10, d.y));
-                });
-
                 link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
                     .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
                 node.attr("cx", d => d.x).attr("cy", d => d.y);
@@ -336,65 +262,19 @@
                 return;
             }
 
-            container.innerHTML = articles.map(item => {
-                const link = `article.html?file=${item.file}&id=${item.id}${term ? '&keyword=' + encodeURIComponent(term) : ''}`;
-                return `
+            container.innerHTML = articles.map(item => `
                 <div class="timeline-item">
                     <div class="timeline-marker"></div>
                     <span class="timeline-date">${item.date}</span>
                     <h2 class="timeline-title">
-                        <a href="${link}">${item.title}</a>
+                        <a href="article.html?file=${item.file}&id=${item.id}${term ? '&keyword=' + encodeURIComponent(term) : ''}">${item.title}</a>
                     </h2>
                     <p class="timeline-excerpt">${item.excerpt || ''}</p>
                 </div>
-            `}).join('');
-        }
-
-        // --- 灵感 Modal 逻辑 ---
-        function toggleInspirationModal() {
-            const drawer = document.getElementById('homeInspirationDrawer');
-            const overlay = document.getElementById('inspirationOverlay');
-            const isActive = drawer.style.opacity === '1';
-            
-            if (!isActive) {
-                renderHomeIdeas();
-                drawer.style.opacity = '1';
-                drawer.style.pointerEvents = 'auto';
-                drawer.style.transform = 'translate(-50%, -50%) scale(1)';
-                overlay.classList.add('active');
-            } else {
-                drawer.style.opacity = '0';
-                drawer.style.pointerEvents = 'none';
-                drawer.style.transform = 'translate(-50%, -50%) scale(0.9)';
-                overlay.classList.remove('active');
-            }
-        }
-
-        function renderHomeIdeas() {
-            const ideas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
-            const list = document.getElementById('homeIdeaList');
-            if (ideas.length === 0) {
-                list.innerHTML = '<li style="text-align:center; padding:20px; color:var(--text-secondary);">暂无灵感记录</li>';
-                return;
-            }
-            // 首页显示所有
-            list.innerHTML = ideas.reverse().map(idea => `
-                <li class="idea-item">
-                    <div class="idea-content-text">${idea.content}</div>
-                    <div class="idea-meta">
-                        <span>${idea.date} · 来自《${idea.source}》</span>
-                    </div>
-                </li>
             `).join('');
         }
-        
-        function copyAllIdeas() {
-            const ideas = JSON.parse(localStorage.getItem('leo_ideas') || '[]');
-            const text = ideas.map(i => `> ${i.content}\n(From: ${i.source} @ ${i.date})`).join('\n\n');
-            navigator.clipboard.writeText(text).then(() => alert('已复制全部'));
-        }
 
-        // 主题逻辑
+        // --- 6. 基础功能 (主题) ---
         function initTheme() {
             const isDark = localStorage.getItem('theme') === 'dark';
             if (isDark) document.body.classList.add('dark-mode');
