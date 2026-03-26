@@ -54,7 +54,7 @@
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
         
         <div id="graph-view" class="active">
-            <div id="d3-container" style="width:100%; height:100%;"></div>
+            <div id="d3-container" style="width:100%; height:600px;"></div>
             
             <div class="graph-popover" id="graphPopover"></div>
             
@@ -63,8 +63,7 @@
             </div>
         </div>
 
-        <div id="timeline-view">
-            </div>
+        <div id="timeline-view"></div>
 
     </div>
 
@@ -74,7 +73,7 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme();
-            await loadData(); // 加载文章列表
+            await loadData();
             feather.replace();
             
             window.addEventListener('scroll', () => {
@@ -86,7 +85,6 @@
             document.getElementById('searchInput').addEventListener('input', handleSearch);
         });
 
-        // --- 1. 数据加载 ---
         async function loadData() {
             try {
                 const res = await fetch('articles.json');
@@ -99,6 +97,9 @@
                 document.getElementById('search-status').style.display = 'block';
                 await prefetchContents();
                 document.getElementById('search-status').style.display = 'none';
+                if (window.innerWidth <= 768) {
+                    switchView('timeline'); 
+                }
 
             } catch (error) {
                 console.error("Data Load Error", error);
@@ -115,7 +116,6 @@
             await Promise.all(promises);
         }
 
-        // --- 2. 搜索逻辑 ---
         function handleSearch(e) {
             const term = e.target.value.toLowerCase().trim();
             if(term && document.getElementById('graph-view').classList.contains('active')) {
@@ -135,7 +135,6 @@
             renderTimelineView(filtered, term);
         }
 
-        // --- 3. 视图切换 ---
         window.switchView = function(viewName) {
             const graphBtn = document.getElementById('btnGraph');
             const timelineBtn = document.getElementById('btnTimeline');
@@ -156,7 +155,6 @@
             }
         }
 
-        // --- 4. D3.js 知识星空核心逻辑 ---
         function initGraphView(articles) {
             document.getElementById('graph-loading').style.display = 'none';
             const container = document.getElementById('d3-container');
@@ -166,20 +164,18 @@
             const height = container.clientHeight;
 
             const nodes = articles.map(a => ({ 
-                id: a.id, 
-                title: a.title, 
-                tags: a.tags,
-                group: (a.tags?.[0] || 'Misc'), 
-                file: a.file,
-                date: a.date,
-                excerpt: a.excerpt
+                ...a,
+                id: a.file, 
+                group: (a.tags?.[0] || 'Misc')
             }));
             
             const links = [];
             for (let i = 0; i < articles.length; i++) {
                 for (let j = i + 1; j < articles.length; j++) {
-                    const common = articles[i].tags.filter(tag => articles[j].tags.includes(tag));
-                    if (common.length > 0) links.push({ source: articles[i].id, target: articles[j].id, value: common.length });
+                    const common = (articles[i].tags || []).filter(tag => (articles[j].tags || []).includes(tag));
+                    if (common.length > 0) {
+                        links.push({ source: articles[i].file, target: articles[j].file, value: common.length });
+                    }
                 }
             }
 
@@ -190,10 +186,14 @@
 
             const color = d3.scaleOrdinal(d3.schemeSet3);
 
+            // 动态半径公式函数
+            const getRadius = d => Math.sqrt(d.char_count || 400) / 10 + 5;
+
             simulation = d3.forceSimulation(nodes)
                 .force("link", d3.forceLink(links).id(d => d.id).distance(100))
                 .force("charge", d3.forceManyBody().strength(-200))
-                .force("collide", d3.forceCollide(25))
+                // 碰撞力随半径动态调整，防止重叠
+                .force("collide", d3.forceCollide(d => getRadius(d) + 2))
                 .force("center", d3.forceCenter(width / 2, height / 2));
 
             const link = svg.append("g")
@@ -203,22 +203,26 @@
 
             const node = svg.append("g")
                 .selectAll("circle").data(nodes).join("circle")
-                .attr("r", 8)
+                .attr("r", d => getRadius(d)) // 初始渲染半径
                 .attr("fill", d => color(d.group))
                 .attr("stroke", "#fff").attr("stroke-width", 1.5)
                 .attr("cursor", "pointer")
                 .call(drag(simulation));
 
             node.on("click", (event, d) => {
-                window.location.href = `article.html?file=${d.file}&id=${d.id}`;
+                window.location.href = `article.html?file=${d.file}`;
             });
 
             node.on("mouseover", function(event, d) {
-                d3.select(this).transition().duration(300).attr("r", 12).attr("stroke", "var(--primary)").attr("stroke-width", 3);
+                const currentR = getRadius(d);
+                d3.select(this).transition().duration(300)
+                    .attr("r", currentR + 4) // 基于当前半径放大
+                    .attr("stroke", "var(--primary)")
+                    .attr("stroke-width", 3);
                 
                 const popover = document.getElementById('graphPopover');
                 popover.className = 'graph-popover visible';
-                const tagsHtml = d.tags.map(tag => `<span class="popover-tag">${tag}</span>`).join(' ');
+                const tagsHtml = (d.tags || []).map(tag => `<span class="popover-tag">${tag}</span>`).join(' ');
 
                 popover.innerHTML = `
                     <div class="popover-meta">
@@ -235,8 +239,11 @@
                 popover.style.left = left + "px";
                 popover.style.top = top + "px";
 
-            }).on("mouseout", function() {
-                d3.select(this).transition().duration(300).attr("r", 8).attr("stroke", "#fff").attr("stroke-width", 1.5);
+            }).on("mouseout", function(event, d) {
+                d3.select(this).transition().duration(300)
+                    .attr("r", getRadius(d)) // 回复到动态半径
+                    .attr("stroke", "#fff")
+                    .attr("stroke-width", 1.5);
                 document.getElementById('graphPopover').className = 'graph-popover';
             });
 
@@ -254,7 +261,6 @@
             }
         }
 
-        // --- 5. 渲染时间轴 ---
         function renderTimelineView(articles, term = '') {
             const container = document.getElementById('timeline-view');
             if(articles.length === 0) {
@@ -263,18 +269,20 @@
             }
 
             container.innerHTML = articles.map(item => `
-                <div class="timeline-item">
+                <div class="timeline-item" onclick="this.classList.toggle('fixed')">
                     <div class="timeline-marker"></div>
-                    <span class="timeline-date">${item.date}</span>
-                    <h2 class="timeline-title">
-                        <a href="article.html?file=${item.file}&id=${item.id}${term ? '&keyword=' + encodeURIComponent(term) : ''}">${item.title}</a>
-                    </h2>
-                    <p class="timeline-excerpt">${item.excerpt || ''}</p>
+                    <div class="timeline-content-row">
+                        <span class="timeline-date">${item.date}</span>
+                        <h2 class="timeline-title">
+                            <a href="article.html?file=${item.file}${term ? '&keyword=' + encodeURIComponent(term) : ''}" 
+                            onclick="event.stopPropagation()">${item.title}</a>
+                        </h2>
+                    </div>
+                    <p class="timeline-excerpt">${item.excerpt || '无摘要内容...'}</p>
                 </div>
             `).join('');
         }
 
-        // --- 6. 基础功能 (主题) ---
         function initTheme() {
             const isDark = localStorage.getItem('theme') === 'dark';
             if (isDark) document.body.classList.add('dark-mode');
