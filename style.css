@@ -8,7 +8,7 @@
   --text-main: #171717;       /* 近乎黑：正文 */
   --text-secondary: #737373;  /* 灰色：次要文字 */
   
-  --bg-body: #ffffff;         /* 纯白：全局背景 */
+  --bg-body: #fbfbfb;         /* 纯白：全局背景 */
   --bg-card: #ffffff;         /* 纯白：卡片背景 */
   
   /* 移除噪点纹理，保持纯净 */
