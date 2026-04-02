@@ -6,6 +6,7 @@
   --accent: #525252;          /* 中灰：强调色 */
   
   --text-main: #171717;       /* 近乎黑：正文 */
+  --text-main-rgb: 23, 23, 23; /* 用于 RGBA 计算 */
   --text-secondary: #737373;  /* 灰色：次要文字 */
   
   --bg-body: #fbfbfb;         /* 纯白：全局背景 */
@@ -37,6 +38,7 @@ body.dark-mode {
   --accent: #a3a3a3;
   
   --text-main: #e5e5e5;
+  --text-main-rgb: 229, 229, 229;
   --text-secondary: #a3a3a3;
   
   --bg-body: #0a0a0a;
@@ -71,7 +73,7 @@ body.dark-mode ::-webkit-scrollbar-thumb { background: #404040; }
   position: sticky; top: 0; z-index: 100;
   padding: 1rem 5%;
   display: flex; justify-content: space-between; align-items: center;
-  background: rgba(255, 255, 255, 0.8); 
+  background: #fbfbfb; 
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
   transition: all 0.3s;
@@ -248,6 +250,7 @@ body.dark-mode .header { background: rgba(10, 10, 10, 0.8); }
   background: var(--primary-light);
   border-radius: var(--radius-sm);
 }
+
 /* --- 6. 文章阅读页优化 --- */
 .article-header {
   text-align: center; margin-bottom: 60px; padding-bottom: 40px;
@@ -267,7 +270,6 @@ body.dark-mode .header { background: rgba(10, 10, 10, 0.8); }
   font-size: 1.6rem; margin-top: 2.5em; margin-bottom: 1em; padding-bottom: 0.5em;
   border-bottom: 1px solid var(--border-color);
 }
-
 
 .markdown-body a { color: var(--text-main); text-decoration: underline; text-underline-offset: 4px; }
 .markdown-body blockquote {
@@ -294,44 +296,89 @@ body.dark-mode .markdown-body pre { background: #171717; color: #d4d4d4; }
   font-family: var(--font-mono); font-size: 0.85em; color: var(--text-main);
 }
 
-/* 响应式 */
+/* --- 7. 搜索组件 (Search) --- */
+.search-wrapper {
+  margin: 60px auto;
+  text-align: center;
+  max-width: 400px;
+  padding: 0 20px;
+}
+
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-input-group {
+  position: relative;
+  overflow: hidden;
+}
+
+.search-input-group input {
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  border-bottom: 1px solid rgba(var(--text-main-rgb), 0.2);
+  background: transparent;
+  outline: none;
+  font-size: 1rem;
+  font-family: var(--font-serif);
+  color: var(--text-main);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-input-group input:focus {
+  border-bottom-color: var(--primary);
+  padding-left: 8px;
+}
+
+.search-input-group input::placeholder {
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.search-input-group input:focus::placeholder {
+  transform: translateY(-10px);
+  opacity: 0;
+}
+
+.search-focus-line {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--primary);
+  transition: all 0.4s ease;
+  transform: translateX(-50%);
+}
+
+.search-input-group input:focus ~ .search-focus-line {
+  width: 100%;
+}
+
+.search-slogan {
+  margin-top: 12px;
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.25em;
+  opacity: 0.8;
+  font-weight: 300;
+}
+
+/* 响应式适配修正 */
 @media (max-width: 768px) {
   .article-header h1 { font-size: 2rem; }
   .graph-popover { width: 260px; }
-  #timeline-view { padding-left: 20px; }
-}
-/* --- 手机端适配 (屏幕宽度 < 768px) --- */
-@media (max-width: 768px) {
-  #timeline-view {
-    padding-left: 20px; /* 缩小左侧边距 */
-    margin-top: 20px;
-  }
-
-  .timeline-content-row {
-    flex-direction: column; /* 关键：由并排改为上下堆叠 */
-    gap: 4px;
-  }
-
-  .timeline-date {
-    font-size: 0.75rem;
-    min-width: auto; /* 取消 PC 端的固定宽度 */
-    opacity: 0.8;
-  }
-
-  .timeline-title {
-    font-size: 1rem;
-    white-space: normal; /* 允许长标题换行，避免溢出屏幕 */
-    line-height: 1.4;
-  }
-
-  .timeline-excerpt {
-    padding-left: 0; /* 手机端摘要不再缩进，直接靠左对齐 */
-    font-size: 0.85rem;
-    margin-top: 8px;
-  }
-
-  .timeline-marker {
-    left: -23.5px; /* 调整圆点位置 */
-    top: 12px;
-  }
+  #timeline-view { padding-left: 20px; margin-top: 20px; }
+  .timeline-content-row { flex-direction: column; gap: 4px; }
+  .timeline-date { font-size: 0.75rem; min-width: auto; opacity: 0.8; }
+  .timeline-title { font-size: 1rem; white-space: normal; line-height: 1.4; }
+  .timeline-excerpt { padding-left: 0; font-size: 0.85rem; margin-top: 8px; }
+  .timeline-marker { left: -23.5px; top: 12px; }
+  
+  .search-wrapper { margin: 40px auto; }
 }
