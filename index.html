@@ -81,11 +81,16 @@
         async function loadData() {
             try {
                 const res = await fetch('articles.json');
-                allArticles = await res.json();
+                const data = await res.json();
+                
+                // 现在数据结构变了，articles 在 nodes 字段里
+                allArticles = data.nodes || [];
+                const semanticLinks = data.links || [];
+
                 // 确保文章按日期排序
                 allArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
                 // 指挥渲染两个视图
-                initGraphView(allArticles);     
+                initGraphView(allArticles, semanticLinks);     
                 renderTimelineView(allArticles); 
                 //移动端切换列表视图
                 if (window.innerWidth <= 768) switchView('timeline'); 
@@ -142,7 +147,7 @@
             }
         }
 
-        function initGraphView(articles) {
+        function initGraphView(articles, semanticLinks) {
             const loadingElement = document.getElementById('graph-loading');
             if(loadingElement) loadingElement.style.display = 'none';
             
@@ -152,21 +157,17 @@
             const width = container.clientWidth;
             const height = container.clientHeight;
 
+            // 清除可能存在的旧 SVG
+            d3.select("#d3-container").select("svg").remove();
+
             const nodes = articles.map(a => ({ 
                 ...a,
                 id: a.file, 
                 group: (a.tags?.[0] || 'Misc')
             }));    //创建节点
             
-            const links = [];
-            for (let i = 0; i < articles.length; i++) {
-                for (let j = i + 1; j < articles.length; j++) {
-                    const common = (articles[i].tags || []).filter(tag => (articles[j].tags || []).includes(tag));
-                    if (common.length > 0) {
-                        links.push({ source: articles[i].file, target: articles[j].file, value: common.length });
-                    }
-                }
-            }   //构建连线（每两篇文章有相同标签就创建一条线）
+            // 直接使用传入的语义连线，不再在前端循环计算
+            const links = semanticLinks.map(l => ({...l}));
 
             const svg = d3.select("#d3-container").append("svg")
                 .attr("width", "100%").attr("height", "100%")
@@ -176,16 +177,25 @@
             const getRadius = d => Math.sqrt(d.char_count || 400) / 10 + 5; //计算半径
 
             simulation = d3.forceSimulation(nodes)
-                .force("link", d3.forceLink(links).id(d => d.id).distance(100)) //弹簧力，拉近
-                .force("charge", d3.forceManyBody().strength(-300)) //排斥力，拉远
-                .force("collide", d3.forceCollide(d => getRadius(d) + 5)) //碰撞力，不重叠
+                .force("link", d3.forceLink(links)
+                    .id(d => d.id)
+                    .distance(d => 180 - (d.weight || 0.5) * 150) // 相似度越高，距离越短
+                ) 
+                .force("charge", d3.forceManyBody().strength(-350)) //排斥力，拉远
+                .force("collide", d3.forceCollide(d => getRadius(d) + 8)) //碰撞力，不重叠
                 .force("center", d3.forceCenter(width / 2, height / 2)) //向心力
-                .force("x", d3.forceX(width / 2).strength(0.05)) //向心力
-                .force("y", d3.forceY(height / 2).strength(0.05)); //向心力
+                .force("x", d3.forceX(width / 2).strength(0.06)) 
+                .force("y", d3.forceY(height / 2).strength(0.06)); 
 
             const link = svg.append("g")
-                .attr("stroke", "var(--text-secondary)").attr("stroke-opacity", 0.15)
-                .selectAll("line").data(links).join("line").attr("stroke-width", d => Math.sqrt(d.value));
+                .attr("stroke", "var(--text-secondary)")
+                .attr("stroke-opacity", 0.2)
+                .selectAll("line")
+                .data(links)
+                .join("line")
+                .attr("stroke-width", d => (d.weight || 0.5) * 10); // 权重越高线越粗
+            link.append("title")
+                .text(d => `相关度: ${Math.round(d.weight * 100)}%`);
 
             const node = svg.append("g")
                 .selectAll("circle").data(nodes).join("circle")
@@ -197,7 +207,7 @@
                 .call(drag(simulation));
 
             node.on("click", (event, d) => {
-                window.location.href = `article.html?file=${d.file}`;
+                window.location.href = `article.html?file=${encodeURIComponent(d.file)}`;
             });
 
             node.on("mouseover", function(event, d) {
@@ -311,7 +321,7 @@
                     <div class="timeline-content-row">
                         <span class="timeline-date">${item.date}</span>
                         <h2 class="timeline-title">
-                            <a href="article.html?file=${item.file}${term ? '&keyword=' + encodeURIComponent(term) : ''}" 
+                            <a href="article.html?file=${encodeURIComponent(item.file)}${term ? '&keyword=' + encodeURIComponent(term) : ''}" 
                             onclick="event.stopPropagation()">${item.title}</a>
                         </h2>
                     </div>

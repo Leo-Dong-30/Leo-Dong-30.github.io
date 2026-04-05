@@ -51,13 +51,22 @@
         // --- 1. 文章加载与渲染 ---
         async function loadArticle(file) {
             try {
-                const [text, metaRes] = await Promise.all([
-                    fetch(`Article/${file}`).then(r => r.text()),
-                    fetch('articles.json').then(r => r.json())
-                ]);
+                // 分开获取，增加容错性
+                const res = await fetch(`Article/${file}`);
+                if (!res.ok) throw new Error("Markdown file not found");
+                const text = await res.text();
+
+                const jsonRes = await fetch('articles.json');
+                const data = await jsonRes.json();
+                
+                // 关键修复：从 data.nodes 中寻找元数据
+                const articles = data.nodes || []; 
+                const meta = articles.find(a => a.file === file);
 
                 const contentEl = document.getElementById('content');
                 contentEl.innerHTML = marked.parse(text);
+                
+                // 渲染数学公式 (KaTeX)
                 renderMathInElement(contentEl, {
                     delimiters: [
                         {left: '$$', right: '$$', display: true},
@@ -67,10 +76,14 @@
                     ],
                     throwOnError: false
                 });
-                // 关键词高亮逻辑
+
+                // 关键词高亮
                 if (keyword) {
                     const instance = new Mark(contentEl);
-                    instance.mark(keyword, { element: "mark", className: "highlight" });
+                    instance.mark(keyword, { 
+                        element: "mark", 
+                        className: "highlight" 
+                    });
                     setTimeout(() => {
                         const firstMark = document.querySelector('mark');
                         if(firstMark) firstMark.scrollIntoView({behavior: "smooth", block: "center"});
@@ -78,22 +91,25 @@
                 }
 
                 // 填充文章元数据
-                const meta = metaRes.find(a => a.file === file);
                 if(meta) {
                     document.title = meta.title;
                     document.getElementById('articleTitle').innerText = meta.title;
                     document.getElementById('articleMeta').innerHTML = `
                         <span>${meta.date}</span> &middot; 
-                        ${(meta.tags||[]).map(t => `#${t}`).join(' ')}
+                        ${(meta.tags||[]).map(t => `<span class="article-tag">#${t}</span>`).join(' ')}
                     `;
                 }
                 
             } catch(e) {
-                document.getElementById('content').innerText = "文章加载失败，可能路径已迷失。";
-                console.error(e);
+                document.getElementById('content').innerHTML = `
+                    <div style="text-align:center; padding: 50px; color: var(--text-secondary);">
+                        <p>文章加载失败，可能路径已迷失。</p>
+                        <small style="opacity: 0.6;">Error: ${e.message}</small>
+                    </div>
+                `;
+                console.error("Load Error:", e);
             }
         }
-
         // --- 2. 基础功能：主题切换 ---
         function initTheme() {
             const isDark = localStorage.getItem('theme') === 'dark';
