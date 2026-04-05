@@ -57,7 +57,8 @@ def generate_articles_json():
                         "date": formatted_date,
                         "tags": unique_tags,
                         "excerpt": excerpt,
-                        "char_count": char_count  # 新增字段用于 D3 渲染
+                        "char_count": char_count,
+                        "fullContent": content
                     })
             except Exception as e:
                 print(f"读取 {filename} 出错: {e}")
