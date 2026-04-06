@@ -143,7 +143,6 @@ def generate_articles_json():
     links = []
     if len(all_embeddings) > 1:
         sim_matrix = cosine_similarity(all_embeddings)
-        print('要画图了')
         plot_similarity_heatmap(sim_matrix, articles)
         for i in range(len(articles)):
             for j in range(i + 1, len(articles)):
@@ -185,7 +184,7 @@ def plot_similarity_heatmap(sim_matrix, articles, output_file='similarity_heatma
                 annot=False, # 如果文章太多，建议关闭数字标注
                 cbar_kws={'label': 'Cosine Similarity'})
     
-    plt.title("LeoBlog 全局语义关联热力图", fontsize=15)
+    plt.title("全局语义关联热力图", fontsize=15)
     plt.xticks(rotation=45, ha='right', fontsize=9)
     plt.yticks(fontsize=9)
     plt.tight_layout()
