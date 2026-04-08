@@ -51,18 +51,18 @@
         // --- 1. 文章加载与渲染 ---
         async function loadArticle(file) {
             try {
-                // 分开获取，增加容错性
+                // 获取 Markdown文本
                 const res = await fetch(`Article/${file}`);
                 if (!res.ok) throw new Error("Markdown file not found");
-                const text = await res.text();
-
+                let text = await res.text();
+                // 自动修正图片路径
+                text = text.replace(/\]\(image\//g, '](Article/image/')
+                // 获取元数据
                 const jsonRes = await fetch('articles.json');
                 const data = await jsonRes.json();
-                
-                // 关键修复：从 data.nodes 中寻找元数据
                 const articles = data.nodes || []; 
                 const meta = articles.find(a => a.file === file);
-
+                // 渲染
                 const contentEl = document.getElementById('content');
                 contentEl.innerHTML = marked.parse(text);
                 

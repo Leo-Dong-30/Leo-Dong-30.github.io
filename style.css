@@ -271,6 +271,14 @@ body.dark-mode .header { background: rgba(10, 10, 10, 0.8); }
   border-bottom: 1px solid var(--border-color);
 }
 
+.markdown-body img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.5em auto;
+    border-radius: 4px;
+}
+
 .markdown-body a { color: var(--text-main); text-decoration: underline; text-underline-offset: 4px; }
 .markdown-body blockquote {
   border: none;
