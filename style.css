@@ -265,12 +265,18 @@ body.dark-mode .header { background: rgba(10, 10, 10, 0.8); }
   line-height: 2;
   letter-spacing: 0.01rem;
 }
+
 .markdown-body h2 {
   font-family: var(--font-sans);
-  font-size: 1.6rem; margin-top: 2.5em; margin-bottom: 1em; padding-bottom: 0.5em;
-  border-bottom: 1px solid var(--border-color);
+  font-size: 1.6rem;
+  margin: 3.5em 0 1.5em;
+  padding-left: 15px;
+  border-left: 3px solid var(--primary);
+  border-bottom: none; 
+  line-height: 1.2;
 }
 
+/* 图片格式 */
 .markdown-body img {
     max-width: 100%;
     height: auto;
@@ -279,29 +285,71 @@ body.dark-mode .header { background: rgba(10, 10, 10, 0.8); }
     border-radius: 4px;
 }
 
-.markdown-body a { color: var(--text-main); text-decoration: underline; text-underline-offset: 4px; }
+/* 超链接格式 */
+.markdown-body a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--text-secondary);
+  text-underline-offset: 6px;
+  transition: all 0.3s ease;
+}
+.markdown-body a:hover {
+  color: var(--primary);
+  border-bottom: 1px solid var(--primary);
+  opacity: 1;
+}
+.markdown-body a:active { transform: translateY(1px);}
+
+/* 引用格式 */
 .markdown-body blockquote {
   border: none;
   background: none;
-  color: #737373; 
-  font-family: "KaiTi", "STKaiti", "华文楷体", "楷体", serif;
-  margin: 2em 0;
-  padding: 0 1.2em;
-  font-style: normal;
-  font-size: 1em;
-  border-left: 1px solid var(--border-color);
+  margin: 4em 0; 
+  padding: 0 15%;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+  font-style: italic;
+  text-align: center; 
+  line-height: 2.2;
 }
-.markdown-body pre {
-  background: #f5f5f5; color: #171717; padding: 20px;
-  border-radius: var(--radius-sm); overflow-x: auto;
-  font-family: var(--font-mono); font-size: 0.9rem;
-  border: 1px solid var(--border-color);
+.markdown-body blockquote::before {
+  content: '“';
+  display: block;
+  font-size: 2rem;
+  margin-bottom: -10px;
+  opacity: 0.2;
 }
-body.dark-mode .markdown-body pre { background: #171717; color: #d4d4d4; }
 
+.markdown-body pre {
+  background: var(--bg-card); /* 随背景色变化 */
+  color: var(--text-main);
+  padding: 24px;
+  margin: 2.5em 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  /* 淡淡的阴影，像纸张边缘 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+body.dark-mode .markdown-body pre {
+  background: #121212;
+  box-shadow: none;
+}
+/* 行内代码格式 */
 .markdown-body code {
-  background: var(--primary-light); padding: 2px 4px; border-radius: 2px;
-  font-family: var(--font-mono); font-size: 0.85em; color: var(--text-main);
+  color: var(--accent); 
+  background: var(--primary-light);
+  padding: 3px 5px;
+  margin: 0 3px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  font-weight: 500;
+  border: 1px solid rgba(var(--text-main-rgb), 0.05);
 }
 
 /* --- 7. 搜索组件 (Search) --- */
