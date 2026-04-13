@@ -60,39 +60,34 @@
     <script>
         let allArticles = []; 
         let simulation;  
-        let autoShowTimer; // 自动轮播计时器
-        let isUserInteracting = false; // 用户是否正在干扰（悬停或拖拽）
+        let autoShowTimer; 
+        let isUserInteracting = false; 
+
         // ===1、总调度
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme();       
             await loadData();  
-            feather.replace();  //图标库，替换成SVG图标
-            
+            feather.replace();
             window.addEventListener('scroll', () => {
                 const header = document.getElementById('mainHeader');
                 if(window.scrollY > 10) header.classList.add('scrolled');
                 else header.classList.remove('scrolled');
-            });     //监听用户向下滚动页面，给导航栏增加效果
-            
+            });            
             document.getElementById('searchInput').addEventListener('input', handleSearch);
-            // 搜索框实时响应，触发handleSearch函数
         });
+
         // ===2、数据引擎
         async function loadData() {
             try {
                 const res = await fetch('data/articles.json');
                 const data = await res.json();
                 
-                // 现在数据结构变了，articles 在 nodes 字段里
                 allArticles = data.nodes || [];
                 const semanticLinks = data.links || [];
 
-                // 确保文章按日期排序
                 allArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
-                // 指挥渲染两个视图
                 initGraphView(allArticles, semanticLinks);     
                 renderTimelineView(allArticles); 
-                //移动端切换列表视图
                 if (window.innerWidth <= 768) switchView('timeline'); 
 
                 console.log("全量索引加载完毕，全文搜索已就绪。");
@@ -100,20 +95,18 @@
                 console.error("Data Load Error", error);
             }
         }
+
         // ===3、搜索功能
         function handleSearch(e) {
-            const term = e.target.value.toLowerCase().trim();   //预处理输入内容
+            const term = e.target.value.toLowerCase().trim();  
             
-            // 如果正在星图模式输入，自动切换到列表模式查看结果
             if(term && document.getElementById('graph-view').classList.contains('active')) {
                 switchView('timeline');
             }
-            // 搜索框空了，显示全部
             if (!term) {
                 renderTimelineView(allArticles);
                 return;
             }
-            // 全文过滤，同时检查四个地方能否匹配上
             const filtered = allArticles.filter(a => {
                 const inTitle = (a.title || '').toLowerCase().includes(term);
                 const inTags = (a.tags || []).join(' ').toLowerCase().includes(term);
@@ -122,8 +115,9 @@
                 return inTitle || inTags || inExcerpt || inContent;
             });
 
-            renderTimelineView(filtered, term);     // 显示过滤后的文章并传入关键词用以高亮
+            renderTimelineView(filtered, term); 
         }
+
         // ===4、视图转换
         window.switchView = function(viewName) {
             const graphBtn = document.getElementById('btnGraph');
@@ -146,7 +140,7 @@
                 stopAutoShow(); 
             }
         }
-
+        // ===5、星图
         function initGraphView(articles, semanticLinks) {
             const loadingElement = document.getElementById('graph-loading');
             if(loadingElement) loadingElement.style.display = 'none';
@@ -307,7 +301,7 @@
 
             startAutoShow();
         }
-
+        // 6、时间轴
         function renderTimelineView(articles, term = '') {
             const container = document.getElementById('timeline-view');
             if(articles.length === 0) {
