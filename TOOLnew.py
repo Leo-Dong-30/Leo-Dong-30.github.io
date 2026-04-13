@@ -121,7 +121,7 @@ def generate_articles_json():
                         "char_count": clean_content_len,
                         "fullContent": content,
                         "mtime": mtime,
-                        "recommendations": [] # 预留推荐位
+                        "recommendations": []
                     })
             except Exception as e:
                 print(f"读取 {filename} 出错: {e}")
@@ -152,7 +152,7 @@ def generate_articles_json():
     with open(CACHE_FILE, 'w', encoding='utf-8') as f:
         json.dump(new_cache, f)
 
-    # 3. 计算全局关联 & 生成节点专属推荐
+    # 3. 计算全局关联 & 生成 "4+2" 推荐策略
     print("🧠 正在构建语义关联矩阵...")
     links = []
     if len(all_embeddings) > 1:
@@ -162,11 +162,11 @@ def generate_articles_json():
             current_article_scores = []
             
             for j in range(len(articles)):
-                if i == j: continue  # 不推荐自己
+                if i == j: continue 
                 
                 score = float(sim_matrix[i][j])
                 
-                # 记录到全局 links (用于星图连线，需满足阈值)
+                # 连线逻辑：仅保留超过阈值的用于星图连线
                 if j > i and score > SIMILARITY_THRESHOLD:
                     links.append({
                         "source": articles[i]['file'],
@@ -174,7 +174,6 @@ def generate_articles_json():
                         "weight": round(score, 3)
                     })
                 
-                # 记录该文章的所有关联得分，用于后续 Top 5 排序
                 current_article_scores.append({
                     "file": articles[j]['file'],
                     "title": articles[j]['title'],
@@ -183,12 +182,13 @@ def generate_articles_json():
                     "weight": round(score, 3)
                 })
             
-            # 排序并取前 5 个最相关的
-            articles[i]['recommendations'] = sorted(
-                current_article_scores, 
-                key=lambda x: x['weight'], 
-                reverse=True
-            )[:5]
+            # --- 4+2 推荐策略实现 ---
+            sorted_scores = sorted(current_article_scores, key=lambda x: x['weight'], reverse=True)
+            top_4_related = sorted_scores[:4]
+            for r in top_4_related: r['rec_type'] = 'related'
+            last_2_unrelated = sorted_scores[-2:] if len(sorted_scores) >= 2 else []
+            for u in last_2_unrelated: u['rec_type'] = 'serendipity'
+            articles[i]['recommendations'] = top_4_related + last_2_unrelated
 
     # 4. 最终排序与保存
     articles.sort(key=lambda x: x['date'], reverse=True)
@@ -202,8 +202,8 @@ def generate_articles_json():
     with open(OUTPUT_JSON, 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=2)
     
-    print(f"✅ 处理完成！推荐数据已注入节点。")
-    print(f"📊 统计：{len(articles)} 篇文章 | {len(links)} 条语义关联")
+    print(f"✅ 处理完成！已应用“4+2”推荐策略。")
+    print(f"📊 统计：{len(articles)} 篇文章 | {len(links)} 条语义关联线")
 
 if __name__ == "__main__":
     generate_articles_json()

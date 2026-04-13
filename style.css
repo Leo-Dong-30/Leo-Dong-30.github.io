@@ -494,6 +494,10 @@ body.dark-mode .markdown-body pre {
     overflow: hidden;
     line-height: 1.5;
 }
+/* 自动淡化最后两篇推荐卡片 */
+.rec-list .rec-card:nth-last-child(-n+2) {opacity: 0.75;}
+.rec-list .rec-card:nth-last-child(-n+2):hover { opacity: 1; }
+
 
 /* 暗色模式适配 */
 body.dark-mode .rec-card:hover {
