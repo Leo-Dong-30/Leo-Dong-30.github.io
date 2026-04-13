@@ -33,7 +33,16 @@
         </div>
 
         <div class="markdown-body" id="content">
+        </div>
+
+        <div id="recommendation-section" class="recommendation-container" style="display:none;">
+            <div class="rec-header">
+                <i data-feather="link"></i>
+                <span>语义相关</span>
             </div>
+            <div id="recommendation-list" class="rec-list">
+                </div>
+        </div>
     </div>
 
     <script>
@@ -58,7 +67,7 @@
                 // 自动修正图片路径
                 text = text.replace(/\]\(image\//g, '](Article/image/')
                 // 获取元数据
-                const jsonRes = await fetch('articles.json');
+                const jsonRes = await fetch('data/articles.json');
                 const data = await jsonRes.json();
                 const articles = data.nodes || []; 
                 const meta = articles.find(a => a.file === file);
@@ -98,6 +107,23 @@
                         <span>${meta.date}</span> &middot; 
                         ${(meta.tags||[]).map(t => `<span class="article-tag">#${t}</span>`).join(' ')}
                     `;
+
+                    // --- 新增：渲染推荐文章逻辑 ---
+                    if (meta.recommendations && meta.recommendations.length > 0) {
+                        const recSection = document.getElementById('recommendation-section');
+                        const recList = document.getElementById('recommendation-list');
+                        
+                        recSection.style.display = 'block';
+                        recList.innerHTML = meta.recommendations.map(rec => `
+                            <a href="Reading.html?file=${encodeURIComponent(rec.file)}" class="rec-card">
+                                <div class="rec-card-meta">${rec.date} · ${Math.round(rec.weight * 100)}% 相关</div>
+                                <div class="rec-card-title">${rec.title}</div>
+                                <div class="rec-card-excerpt">${rec.excerpt || ''}</div>
+                            </a>
+                        `).join('');
+                        
+                        if(window.feather) feather.replace();
+                    }
                 }
                 
             } catch(e) {

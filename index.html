@@ -80,7 +80,7 @@
         // ===2、数据引擎
         async function loadData() {
             try {
-                const res = await fetch('articles.json');
+                const res = await fetch('data/articles.json');
                 const data = await res.json();
                 
                 // 现在数据结构变了，articles 在 nodes 字段里
@@ -207,7 +207,7 @@
                 .call(drag(simulation));
 
             node.on("click", (event, d) => {
-                window.location.href = `article.html?file=${encodeURIComponent(d.file)}`;
+                window.location.href = `Reading.html?file=${encodeURIComponent(d.file)}`;
             });
 
             node.on("mouseover", function(event, d) {
@@ -321,7 +321,7 @@
                     <div class="timeline-content-row">
                         <span class="timeline-date">${item.date}</span>
                         <h2 class="timeline-title">
-                            <a href="article.html?file=${encodeURIComponent(item.file)}${term ? '&keyword=' + encodeURIComponent(term) : ''}" 
+                            <a href="Reading.html?file=${encodeURIComponent(item.file)}${term ? '&keyword=' + encodeURIComponent(term) : ''}" 
                             onclick="event.stopPropagation()">${item.title}</a>
                         </h2>
                     </div>
