@@ -140,6 +140,7 @@
                 stopAutoShow(); 
             }
         }
+        
         // ===5、星图
         function initGraphView(articles, semanticLinks) {
             const loadingElement = document.getElementById('graph-loading');
@@ -301,7 +302,8 @@
 
             startAutoShow();
         }
-        // 6、时间轴
+        
+        // ===6、时间轴
         function renderTimelineView(articles, term = '') {
             const container = document.getElementById('timeline-view');
             if(articles.length === 0) {
